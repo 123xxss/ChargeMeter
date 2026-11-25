@@ -1,13 +1,14 @@
 package com.dsh.chargemeter;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -25,6 +26,7 @@ import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -340,20 +342,125 @@ public class MainActivity extends Activity {
 
     }
 
-    private void pickTheme() {
-        String[] names = new String[THEMES.length];
-        for (int i = 0; i < THEMES.length; i++) {
-            names[i] = (i == themeId ? "✓ " : "") + THEMES[i].name;
+    private Dialog themedDialog(View content) {
+        Dialog d = new Dialog(this, android.R.style.Theme_Translucent_NoTitleBar);
+        d.setContentView(content);
+        Window w = d.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams lp = w.getAttributes();
+            lp.width = (int) (getResources().getDisplayMetrics().widthPixels * 0.88f);
+            lp.height = WindowManager.LayoutParams.WRAP_CONTENT;
+            lp.dimAmount = 0.62f;
+            w.setAttributes(lp);
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
         }
-        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
-                .setTitle("选择风格")
-                .setItems(names, (d, which) -> {
-                    if (which == themeId) return;
-                    cfg.edit().putInt("theme", which).apply();
+        return d;
+    }
+
+    private LinearLayout dialogPanel() {
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(th.dark ? th.panel : 0xFFFFFFFF);
+        bg.setCornerRadius(dp(22));
+        bg.setStroke(dp(1), th.line);
+        l.setBackground(bg);
+        l.setPadding(dp(18), dp(18), dp(18), dp(14));
+        return l;
+    }
+
+    private TextView dialogTitle(String text) {
+        TextView t = new TextView(this);
+        t.setText(text);
+        t.setTextColor(th.text);
+        t.setTextSize(18);
+        t.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        t.setPadding(dp(4), 0, 0, dp(10));
+        return t;
+    }
+
+    private View divider() {
+        View v = new View(this);
+        v.setBackgroundColor(th.line);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+        v.setLayoutParams(lp);
+        return v;
+    }
+
+    private void pickTheme() {
+        LinearLayout panel = dialogPanel();
+        panel.addView(dialogTitle("选择风格"));
+
+        for (int i = 0; i < THEMES.length; i++) {
+            final int idx = i;
+            final Theme t = THEMES[i];
+
+            LinearLayout row = new LinearLayout(this);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(8), dp(11), dp(8), dp(11));
+
+            View swatch = new View(this);
+            GradientDrawable sg = new GradientDrawable(GradientDrawable.Orientation.LEFT_RIGHT,
+                    new int[]{t.bg, t.a1, t.a2});
+            sg.setCornerRadius(dp(7));
+            sg.setStroke(dp(1), 0x33FFFFFF);
+            swatch.setBackground(sg);
+            row.addView(swatch, new LinearLayout.LayoutParams(dp(40), dp(26)));
+
+            TextView name = new TextView(this);
+            name.setText(t.name);
+            name.setTextColor(th.text);
+            name.setTextSize(15);
+            name.setPadding(dp(14), 0, 0, 0);
+            LinearLayout.LayoutParams nlp = new LinearLayout.LayoutParams(0,
+                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            row.addView(name, nlp);
+
+            if (idx == themeId) {
+                TextView ck = new TextView(this);
+                ck.setText("✓");
+                ck.setTextSize(16);
+                ck.setTypeface(MONO, Typeface.BOLD);
+                ck.setTextColor(th.a2);
+                ck.setPadding(dp(8), 0, dp(4), 0);
+                row.addView(ck);
+            }
+
+            GradientDrawable rbg = new GradientDrawable();
+            rbg.setColor(idx == themeId ? (th.a1 & 0x00FFFFFF) | 0x14000000 : Color.TRANSPARENT);
+            rbg.setCornerRadius(dp(12));
+            row.setBackground(rbg);
+            row.setOnClickListener(v -> {
+                if (idx != themeId) {
+                    cfg.edit().putInt("theme", idx).apply();
                     recreate();
-                })
-                .setNegativeButton("取消", null)
-                .show();
+                } else {
+                    dismissDialogAndRecreate();
+                }
+            });
+
+            panel.addView(row);
+            if (i < THEMES.length - 1) panel.addView(divider());
+        }
+
+        TextView cancel = new TextView(this);
+        cancel.setText("取消");
+        cancel.setTextSize(14);
+        cancel.setTextColor(th.dim);
+        cancel.setGravity(Gravity.CENTER);
+        cancel.setPadding(dp(14), dp(14), dp(14), dp(6));
+        panel.addView(cancel);
+
+        final Dialog dlg = themedDialog(panel);
+        cancel.setOnClickListener(v -> dlg.dismiss());
+        dlg.show();
+    }
+
+    private void dismissDialogAndRecreate() {
+        recreate();
     }
 
     private GradientDrawable panelStroke(int radiusDp) {
@@ -365,64 +472,124 @@ public class MainActivity extends Activity {
     }
 
     private void showSettings() {
-        LinearLayout box = new LinearLayout(this);
-        box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(22), dp(12), dp(22), dp(0));
+        LinearLayout panel = dialogPanel();
+        panel.addView(dialogTitle("校准"));
 
         TextView tip = new TextView(this);
         tip.setText("推荐 " + recommendedCells() + " 电芯 · " + Build.MANUFACTURER + " " + Build.MODEL);
         tip.setTextColor(th.a1);
         tip.setTextSize(12);
-        box.addView(tip);
+        tip.setPadding(dp(4), 0, 0, dp(12));
+        panel.addView(tip);
 
-        TextView t1 = new TextView(this);
-        t1.setText("电芯数");
-        t1.setTextColor(th.dim);
-        t1.setTextSize(12);
-        t1.setPadding(0, dp(8), 0, 0);
-        box.addView(t1);
+        TextView l1 = new TextView(this);
+        l1.setText("电芯数");
+        l1.setTextColor(th.dim);
+        l1.setTextSize(12);
+        l1.setPadding(dp(4), 0, 0, dp(6));
+        panel.addView(l1);
 
         EditText e1 = new EditText(this);
         e1.setInputType(InputType.TYPE_CLASS_NUMBER);
         e1.setText(String.valueOf(cellCount == 1 ? recommendedCells() : cellCount));
-        box.addView(e1);
+        styleInput(e1);
+        panel.addView(e1);
 
-        TextView t2 = new TextView(this);
-        t2.setText("校准倍率（1~10，用来对齐系统显示）");
-        t2.setTextColor(th.dim);
-        t2.setTextSize(12);
-        t2.setPadding(0, dp(8), 0, 0);
-        box.addView(t2);
+        TextView l2 = new TextView(this);
+        l2.setText("校准倍率");
+        l2.setTextColor(th.dim);
+        l2.setTextSize(12);
+        l2.setPadding(dp(4), dp(14), 0, dp(6));
+        panel.addView(l2);
 
         EditText e2 = new EditText(this);
         e2.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
         e2.setText(String.valueOf(ratio));
-        box.addView(e2);
+        styleInput(e2);
+        panel.addView(e2);
 
-        new AlertDialog.Builder(this, android.R.style.Theme_Material_Dialog_NoActionBar)
-                .setTitle("校准")
-                .setView(box)
-                .setPositiveButton("保存", (d, w) -> {
-                    try {
-                        int c = Integer.parseInt(e1.getText().toString().trim());
-                        if (c < 1 || c > 4) c = 1;
-                        cellCount = c;
-                    } catch (Exception ignored) {
-                    }
-                    try {
-                        double r = Double.parseDouble(e2.getText().toString().trim());
-                        if (r <= 0 || r > 10) r = 1.0;
-                        ratio = r;
-                    } catch (Exception ignored) {
-                    }
-                    cfg.edit().putInt("cells", cellCount).putFloat("ratio", (float) ratio).apply();
-                    peak = 0;
-                    chart.clear();
-                    tick();
-                    Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show();
-                })
-                .setNegativeButton("取消", null)
-                .show();
+        TextView hint = new TextView(this);
+        hint.setText("1~10，用来对齐手机自己显示的瓦数");
+        hint.setTextColor(th.dim);
+        hint.setTextSize(10);
+        hint.setPadding(dp(4), dp(6), 0, 0);
+        panel.addView(hint);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        btnRow.setPadding(0, dp(18), 0, 0);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        btnRow.setLayoutParams(blp);
+
+        LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+
+        TextView cancel = pillButton("取消", false);
+        btnRow.addView(cancel, half);
+
+        LinearLayout.LayoutParams half2 = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        half2.leftMargin = dp(10);
+        TextView save = pillButton("保存", true);
+        btnRow.addView(save, half2);
+        panel.addView(btnRow);
+
+        final Dialog dlg = themedDialog(panel);
+        cancel.setOnClickListener(v -> dlg.dismiss());
+        save.setOnClickListener(v -> {
+            try {
+                int c = Integer.parseInt(e1.getText().toString().trim());
+                if (c < 1 || c > 4) c = 1;
+                cellCount = c;
+            } catch (Exception ignored) {
+            }
+            try {
+                double r = Double.parseDouble(e2.getText().toString().trim());
+                if (r <= 0 || r > 10) r = 1.0;
+                ratio = r;
+            } catch (Exception ignored) {
+            }
+            cfg.edit().putInt("cells", cellCount).putFloat("ratio", (float) ratio).apply();
+            peak = 0;
+            chart.clear();
+            tick();
+            dlg.dismiss();
+            Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show();
+        });
+        dlg.show();
+    }
+
+    private void styleInput(EditText e) {
+        e.setTextColor(th.text);
+        e.setTextSize(17);
+        e.setPadding(dp(12), dp(10), dp(12), dp(10));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(th.dark ? 0xFF101A26 : 0xFFF2F2F7);
+        bg.setCornerRadius(dp(12));
+        bg.setStroke(dp(1), th.line);
+        e.setBackground(bg);
+    }
+
+    private TextView pillButton(String text, boolean primary) {
+        TextView b = new TextView(this);
+        b.setText(text);
+        b.setTextSize(14);
+        b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        b.setGravity(Gravity.CENTER);
+        b.setPadding(dp(16), dp(11), dp(16), dp(11));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dp(14));
+        if (primary) {
+            bg.setColor(th.a1);
+            b.setTextColor(th.dark ? 0xFF06121A : Color.WHITE);
+        } else {
+            bg.setColor(Color.TRANSPARENT);
+            bg.setStroke(dp(1), th.line);
+            b.setTextColor(th.dim);
+        }
+        b.setBackground(bg);
+        return b;
     }
 
     private String techText(String tech) {

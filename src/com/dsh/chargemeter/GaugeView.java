@@ -1,5 +1,6 @@
 package com.dsh.chargemeter;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -9,6 +10,7 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.util.AttributeSet;
 import android.view.View;
+import android.view.animation.DecelerateInterpolator;
 
 public class GaugeView extends View {
 
@@ -23,6 +25,7 @@ public class GaugeView extends View {
     private final RectF oval = new RectF();
     private float ratio = 0f;
     private float smooth = 0f;
+    private ValueAnimator animator;
     private float stroke = 10f;
 
     private int cTrack = Color.parseColor("#131E2A");
@@ -88,9 +91,31 @@ public class GaugeView extends View {
 
     void setRatio(float r) {
         ratio = Math.max(0f, Math.min(1f, r));
-        smooth += (ratio - smooth) * 0.35f;
-        if (Math.abs(ratio - smooth) < 0.004f) smooth = ratio;
+        if (animator != null && animator.isRunning()) return;
+        smooth = ratio;
         invalidate();
+    }
+
+    /** 平滑过渡到目标比例（600ms 缓动），用于让仪表的弧线“游动”而不是跳变 */
+    void animateTo(float r) {
+        float target = Math.max(0f, Math.min(1f, r));
+        if (Math.abs(target - smooth) < 0.002f) return;
+        if (animator != null) animator.cancel();
+        animator = ValueAnimator.ofFloat(smooth, target);
+        animator.setDuration(600);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.addUpdateListener(a -> {
+            smooth = (float) a.getAnimatedValue();
+            invalidate();
+        });
+        animator.start();
+    }
+
+    void stopAnim() {
+        if (animator != null) {
+            animator.cancel();
+            animator = null;
+        }
     }
 
     @Override

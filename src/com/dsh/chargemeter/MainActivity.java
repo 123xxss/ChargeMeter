@@ -1,8 +1,12 @@
 package com.dsh.chargemeter;
 
 import android.app.Activity;
+import android.animation.ValueAnimator;
+import android.Manifest;
 import android.app.Dialog;
 import android.content.Context;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
@@ -13,6 +17,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.content.pm.PackageManager;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.InputType;
@@ -23,10 +28,13 @@ import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Display;
+import android.view.GestureDetector;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.animation.DecelerateInterpolator;
 import android.view.WindowManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -35,7 +43,11 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends Activity {
@@ -81,6 +93,7 @@ public class MainActivity extends Activity {
     private TextView levelText;
     private TextView rawText;
     private TextView factorText;
+    private TextView countdownText;
     private GaugeView gauge;
     private ChartView chart;
 
@@ -92,6 +105,23 @@ public class MainActivity extends Activity {
     private double peak;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Map<TextView, String> cardLabels = new HashMap<>();
+    private final ArrayDeque<Double> ampWindow = new ArrayDeque<>();
+    private final ArrayDeque<Double> voltWindow = new ArrayDeque<>();
+    private static final int WINDOW = 5;
+    private ValueAnimator powerAnim;
+    private double displayedWatts = 0;
+    private double lastAmps = 0;
+    private String lastVoltsText = "-- V";
+    private boolean lowPowerHinted = false;
+    private boolean watchServiceOn = false;
+    private final CellDetector cellDetector = new CellDetector();
+    private ChargeHistory history;
+    private long sessionId = -1;
+    private long sessionStartCounter = 0;
+    private double sessionSumWatts = 0;
+    private int sessionSamples = 0;
+    private long lastHistoryWrite = 0;
+    private boolean cellsManual = false;
 
     private float screenHz;
 
@@ -112,6 +142,8 @@ public class MainActivity extends Activity {
         cfg = getSharedPreferences("cfg", Context.MODE_PRIVATE);
         cellCount = cfg.contains("cells") ? cfg.getInt("cells", 1) : recommendedCells();
         ratio = cfg.getFloat("ratio", 1.0f);
+        cellsManual = cfg.getBoolean("cells_manual", false);
+        history = new ChargeHistory(this);
         themeId = cfg.getInt("theme", 0);
         if (themeId < 0 || themeId >= THEMES.length) themeId = 0;
         th = THEMES[themeId];
@@ -240,6 +272,30 @@ public class MainActivity extends Activity {
         powerText.setIncludeFontPadding(false);
         powerRow.addView(powerText);
 
+        GestureDetector gd = new GestureDetector(this,
+                new GestureDetector.SimpleOnGestureListener() {
+                    @Override
+                    public boolean onDoubleTap(MotionEvent e) {
+                        startActivity(new Intent(MainActivity.this, MeterActivity.class));
+                        return true;
+                    }
+                });
+        powerText.setOnTouchListener((v, ev) -> {
+            gd.onTouchEvent(ev);
+            return true;
+        });
+        powerText.setOnLongClickListener(v -> {
+            String txt = String.format("%.2f W · %.2f A · %s",
+                    displayedWatts, lastAmps, lastVoltsText);
+            try {
+                ClipboardManager cm = (ClipboardManager) getSystemService(CLIPBOARD_SERVICE);
+                cm.setPrimaryClip(ClipData.newPlainText("power", txt));
+                Toast.makeText(this, "已复制：" + txt, Toast.LENGTH_SHORT).show();
+            } catch (Exception ignored) {
+            }
+            return true;
+        });
+
         powerUnit = new TextView(this);
         powerUnit.setText(" W");
         powerUnit.setTextColor(th.dim);
@@ -264,6 +320,14 @@ public class MainActivity extends Activity {
         factorText.setGravity(Gravity.CENTER);
         factorText.setPadding(0, dp(4), 0, 0);
         center.addView(factorText);
+
+        countdownText = new TextView(this);
+        countdownText.setTextColor(th.a1);
+        countdownText.setTextSize(11);
+        countdownText.setTypeface(MONO);
+        countdownText.setGravity(Gravity.CENTER);
+        countdownText.setPadding(0, dp(10), 0, 0);
+        center.addView(countdownText);
 
         gaugeBox.addView(center, clp);
         root.addView(gaugeBox);
@@ -322,6 +386,16 @@ public class MainActivity extends Activity {
         levelText.setPadding(0, dp(14), 0, 0);
         root.addView(levelText);
 
+        TextView aboutLink = new TextView(this);
+        aboutLink.setText("关于 · 开源地址");
+        aboutLink.setTextColor(th.a1);
+        aboutLink.setTextSize(11);
+        aboutLink.setGravity(Gravity.CENTER);
+        aboutLink.setPadding(0, dp(16), 0, 0);
+        aboutLink.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, AboutActivity.class)));
+        root.addView(aboutLink);
+
         rawText = new TextView(this);
         rawText.setTextSize(9);
         rawText.setTextColor(th.dark ? (th.dim & 0x00FFFFFF) | 0x99000000 : 0xFFA1A1A6);
@@ -333,6 +407,10 @@ public class MainActivity extends Activity {
         scroll.addView(root, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         setContentView(scroll);
+
+        for (int i = 0; i < root.getChildCount(); i++) {
+            animateEnter(root.getChildAt(i), i);
+        }
 
         try {
             Display d = getWindowManager().getDefaultDisplay();
@@ -550,7 +628,9 @@ public class MainActivity extends Activity {
                 ratio = r;
             } catch (Exception ignored) {
             }
-            cfg.edit().putInt("cells", cellCount).putFloat("ratio", (float) ratio).apply();
+            cfg.edit().putInt("cells", cellCount).putFloat("ratio", (float) ratio)
+                    .putBoolean("cells_manual", true).apply();
+            cellsManual = true;
             peak = 0;
             chart.clear();
             tick();
@@ -643,7 +723,14 @@ public class MainActivity extends Activity {
         if (label.contains("电流")) currentText = tv;
         else if (label.contains("电压")) voltageText = tv;
         else if (label.contains("温度")) tempText = tv;
-        else peakText = tv;
+        else {
+            peakText = tv;
+            tv.setOnClickListener(v -> {
+                peak = 0;
+                setCard(tv, "--");
+                Toast.makeText(this, "峰值已清零", Toast.LENGTH_SHORT).show();
+            });
+        }
         return tv;
     }
 
@@ -679,6 +766,8 @@ public class MainActivity extends Activity {
     protected void onPause() {
         super.onPause();
         handler.removeCallbacks(ticker);
+        if (powerAnim != null) powerAnim.cancel();
+        if (gauge != null) gauge.stopAnim();
     }
 
     private void tick() {
@@ -698,22 +787,35 @@ public class MainActivity extends Activity {
             tech = it.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY);
         }
 
+        long counter = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
         long raw = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
         boolean currentSupported = raw != Long.MIN_VALUE;
         if (!currentSupported) raw = 0;
-        double amps = raw / 1_000_000.0;
-        double cells = voltageMv / 1000.0 * cellCount;
-        double watts = Math.abs(amps) * cells * ratio;
-        if (watts > 400) {
-            amps = amps / 1000.0;
-            watts = watts / 1000.0;
+        double instantAmps = raw / 1_000_000.0;
+        double instantWatts = Math.abs(instantAmps) * (voltageMv / 1000.0) * cellCount * ratio;
+        if (instantWatts > 400) {
+            instantAmps = instantAmps / 1000.0;
         }
+        ampWindow.addLast(instantAmps);
+        voltWindow.addLast((double) voltageMv);
+        while (ampWindow.size() > WINDOW) ampWindow.removeFirst();
+        while (voltWindow.size() > WINDOW) voltWindow.removeFirst();
+
+        double amps = median(ampWindow);
+        double voltsMv = median(voltWindow);
+        double cells = voltsMv / 1000.0 * cellCount;
+        double watts = Math.abs(amps) * cells * ratio;
 
         boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING;
         boolean feeding = amps > 0.02;
         boolean valid = currentSupported && voltageMv >= 2500 && voltageMv <= 5000;
 
-        powerText.setText(valid ? String.format("%.2f", watts) : "--");
+        if (valid) {
+            animatePower(watts);
+        } else {
+            if (powerAnim != null) powerAnim.cancel();
+            powerText.setText("--");
+        }
         powerText.setTextColor(feeding ? th.a2 : th.a1);
         if (th.dark) {
             powerText.setShadowLayer(dp(12), 0, 0, (feeding ? th.a2 : th.a1) & 0x88FFFFFF);
@@ -725,6 +827,8 @@ public class MainActivity extends Activity {
             powerCaption.setText(feeding ? "充入功率" : "放电功率");
         }
 
+        lastAmps = amps;
+        lastVoltsText = String.format("%.2f V", cells);
         updateCard(currentText, String.format("%.2f A", amps));
         updateCard(voltageText, valid ? String.format("%.2f V", cells) : "--");
         updateCard(tempText, tempTenths > 0 ? String.format("%.1f °C", tempTenths / 10.0) : "--");
@@ -735,8 +839,10 @@ public class MainActivity extends Activity {
         updateCard(peakText, peak > 0 ? String.format("%.2f W", peak) : "--");
 
         double gaugeMax = Math.max(20, peak * 1.15);
-        gauge.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
+        gauge.animateTo(valid ? (float) (watts / gaugeMax) : 0f);
         chart.push(feeding && valid ? (float) watts : 0f);
+
+        updateCountdown(level, voltageMv, watts, feeding, valid);
 
         levelText.setText("电量 " + (level >= 0 ? level + "%" : "--")
                 + (techText(tech).isEmpty() ? "" : " · " + techText(tech))
@@ -803,6 +909,153 @@ public class MainActivity extends Activity {
         } else {
             rawText.setText(String.format("原始 %d 微安 · %.3f 安 · %d 毫伏 · 每秒刷新", raw, amps, voltageMv));
         }
+    }
+
+    private void updateCountdown(int level, int voltageMv, double watts, boolean feeding, boolean valid) {
+        if (countdownText == null) return;
+        if (!feeding || !valid || level <= 0 || level >= 100) {
+            countdownText.setText(level >= 100 ? "已充满" : "");
+            return;
+        }
+        long counter = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);
+        if (counter <= 0 || watts < 1) {
+            countdownText.setText("");
+            return;
+        }
+        double fullMah = (counter / 1000.0) / (level / 100.0);
+        double remainMah = fullMah - counter / 1000.0;
+        double packVoltage = voltageMv / 1000.0 * cellCount;
+        double remainWh = remainMah / 1000.0 * packVoltage * ratio;
+        double hours = remainWh / watts;
+        long minutes = Math.round(hours * 60);
+        if (minutes < 1 || minutes > 600) {
+            countdownText.setText("");
+            return;
+        }
+        long h = minutes / 60;
+        long m = minutes % 60;
+        countdownText.setText(h > 0
+                ? String.format("距充满约 %d 小时 %d 分", h, m)
+                : String.format("距充满约 %d 分钟", m));
+    }
+
+    private void updateCellsAuto(long counter, double amps) {
+        if (cellsManual) return;
+        int detected = cellDetector.add(counter, amps, System.currentTimeMillis());
+        if (detected > 0 && detected != cellCount) {
+            cellCount = detected;
+            cfg.edit().putInt("cells", cellCount).putBoolean("cells_auto", true).apply();
+            peak = 0;
+        }
+    }
+
+    private void updateHistory(boolean charging, int plugged, int level, double watts, long counter) {
+        long now = System.currentTimeMillis();
+        if (charging && plugged != 0) {
+            if (sessionId < 0) {
+                sessionStartCounter = counter;
+                sessionSumWatts = 0;
+                sessionSamples = 0;
+                sessionId = history.start(level, watts, cellCount);
+                lastHistoryWrite = now;
+            } else {
+                sessionSumWatts += watts;
+                sessionSamples++;
+                if (now - lastHistoryWrite > 5000) {
+                    lastHistoryWrite = now;
+                    double wh = whFromCounter(counter);
+                    history.update(sessionId, level, sessionSamples > 0
+                            ? sessionSumWatts / sessionSamples : watts, wh);
+                }
+            }
+        } else if (sessionId >= 0) {
+            double wh = whFromCounter(counter);
+            history.update(sessionId, level, sessionSamples > 0
+                    ? sessionSumWatts / sessionSamples : 0, wh);
+            sessionId = -1;
+        }
+    }
+
+    private double whFromCounter(long counter) {
+        if (counter <= 0 || sessionStartCounter <= 0 || counter < sessionStartCounter) return 0;
+        double deltaAh = (counter - sessionStartCounter) / 1_000_000.0;
+        double packVoltage = (lastVoltsText != null && lastVoltsText.contains("V"))
+                ? Double.parseDouble(lastVoltsText.replace("V", "").trim()) : 4.0;
+        return deltaAh * packVoltage;
+    }
+
+    private void maybeStartWatch(boolean charging, int plugged) {
+        boolean enabled = cfg.getBoolean("notify_full", true);
+        if (charging && plugged != 0 && enabled) {
+            if (!watchServiceOn) {
+                try {
+                    startForegroundService(new Intent(this, ChargeWatchService.class));
+                    watchServiceOn = true;
+                } catch (Exception ignored) {
+                }
+            }
+        } else if (plugged == 0 || !enabled) {
+            if (watchServiceOn) {
+                try {
+                    stopService(new Intent(this, ChargeWatchService.class));
+                } catch (Exception ignored) {
+                }
+                watchServiceOn = false;
+            }
+        }
+    }
+
+    private void diagnose(boolean charging, boolean feeding, double watts, int level) {
+        if (!charging || !feeding) {
+            lowPowerHinted = false;
+            return;
+        }
+        if (!lowPowerHinted && watts > 0.3 && watts < 10 && level < 80) {
+            lowPowerHinted = true;
+            Toast.makeText(this,
+                    "功率只有 " + String.format("%.1f", watts) + " W，可能线材或充电器不支持快充",
+                    Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void broadcastPower(double amps, double watts, int level) {
+        try {
+            Intent i = new Intent("com.dsh.chargemeter.POWER");
+            i.setPackage(getPackageName());
+            i.putExtra("watts", watts);
+            i.putExtra("amps", amps);
+            i.putExtra("level", level);
+            i.putExtra("timestamp", System.currentTimeMillis());
+            sendBroadcast(i);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private double median(ArrayDeque<Double> q) {
+        List<Double> list = new ArrayList<>(q);
+        if (list.isEmpty()) return 0;
+        Collections.sort(list);
+        int n = list.size();
+        return n % 2 == 1 ? list.get(n / 2) : (list.get(n / 2 - 1) + list.get(n / 2)) / 2.0;
+    }
+
+    private void animatePower(double target) {
+        if (powerAnim != null) powerAnim.cancel();
+        powerAnim = ValueAnimator.ofFloat((float) displayedWatts, (float) target);
+        powerAnim.setDuration(320);
+        powerAnim.setInterpolator(new DecelerateInterpolator());
+        powerAnim.addUpdateListener(a -> {
+            displayedWatts = (float) (double) (Float) a.getAnimatedValue();
+            powerText.setText(String.format("%.2f", displayedWatts));
+        });
+        powerAnim.start();
+    }
+
+    private void animateEnter(View v, int index) {
+        v.setAlpha(0f);
+        v.setTranslationY(dp(16));
+        v.animate().alpha(1f).translationY(0f).setDuration(420)
+                .setStartDelay(index * 60L).setInterpolator(new DecelerateInterpolator()).start();
     }
 
     private int dp(int v) {

@@ -1,5 +1,5 @@
 [![Release](https://img.shields.io/github/v/release/123xxss/ChargeMeter?color=00C853)](https://github.com/123xxss/ChargeMeter/releases)
-[![Download APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-APK%20v5.2-00C853?logo=android&logoColor=white)](https://github.com/123xxss/ChargeMeter/releases/download/v5.2/ChargeMeter_v5.2.apk)
+[![Download APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-APK%20v6.0-00C853?logo=android&logoColor=white)](https://github.com/123xxss/ChargeMeter/releases/download/v6.0/ChargeMeter_v6.0.apk)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -18,7 +18,15 @@
 - **5 套主题**：科幻青、极简白、赛博紫、终端绿、熔岩橙，自绘选择面板（色块预览 + 当前项标记）
 - **充电等级**：涓流 / 标准 / 快速 / 超快 自动判定
 - **全中文界面**，单位使用 W / A / V 等标准符号
-- **校准**：电芯数（1~4）与倍率（0.1~10）可调，用来对齐 ROM 自己显示的瓦数
+- **校准**：电芯数（1~4）与倍率（0.1~10）可调；**电芯数可自动识别**（用 charge counter 增量与电流比值判定单/双电芯）
+- **充满倒计时**：根据当前功率与剩余电量估算「距充满约 X 分钟」
+- **充满提醒**：充电时前台监测，到 100% 响铃/震动提醒一次（可关）
+- **通知栏常驻功率**：锁屏下拉即可看到 `12.3 W · 76%`
+- **桌面小组件 2×1**：功率 + 电量
+- **仪表常亮模式**：全屏黑底大数字，当充电器显示屏用
+- **充电历史**：本地 SQLite 记录每次充电（起止电量、平均/峰值功率、充入 Wh），在「关于」页查看
+- **手势**：双击功率数字进入常亮模式，长按复制读数，点峰值卡片清零
+- **低效充电诊断**：功率低于 10 W 但显示在充电时提示线材/充电器可能不支持快充
 - 无网络权限、无广告、不收集任何数据
 
 <table>
@@ -85,7 +93,7 @@ ANDROID_SDK_ROOT=$HOME/android/sdk QEMU=qemu-x86_64-static bash build.sh
 
 首次构建会自动生成 `signing.keystore`（口令 `android`）。**正式发布请换成你自己的 keystore，并把 `signing.keystore` 排除在仓库外**（`.gitignore` 已包含）。
 
-> 直接下载：[**ChargeMeter_v5.1.apk**](https://github.com/123xxss/ChargeMeter/releases/download/v5.2/ChargeMeter_v5.2.apk)（Release 附件）
+> 直接下载：[**ChargeMeter_v5.1.apk**](https://github.com/123xxss/ChargeMeter/releases/download/v6.0/ChargeMeter_v6.0.apk)（Release 附件）
 
 ```bash
 adb install -r chargemeter.apk

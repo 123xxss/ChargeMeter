@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <!-- 外圈光晕 -->
+    <path
+        android:pathData="M35.62,72.38 A26,26 0 1,1 72.38,72.38"
+        android:strokeColor="#3300E5FF"
+        android:strokeWidth="9"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- 进度弧 -->
+    <path
+        android:pathData="M35.62,72.38 A26,26 0 1,1 72.38,72.38"
+        android:strokeColor="#00E5FF"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- 闪电 -->
+    <path
+        android:fillColor="#00FFA3"
+        android:pathData="M57.5,28 L37,57 h11.2 l-4.2,23 L65,50 h-11.4 z" />
+</vector>

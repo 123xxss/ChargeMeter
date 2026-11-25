@@ -27,6 +27,9 @@ public class ChargeWatchService extends Service {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean notified = false;
+    private long chargerStart = 0;
+    private double chargerMax = 0;
+    private boolean chargerDone = false;
 
     private final Runnable ticker = new Runnable() {
         @Override
@@ -119,7 +122,37 @@ public class ChargeWatchService extends Service {
                     .setContentIntent(openApp())
                     .build();
             getSystemService(NotificationManager.class).notify(ID_ONGOING, n);
+            trackCharger(it, watts);
         } catch (Exception ignored) {
+        }
+    }
+
+    /** 后台也能给充电器建档：插上 45 秒后按峰值功率匹配或新建 */
+    private void trackCharger(Intent it, double watts) {
+        int plugged = it.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0);
+        long now = System.currentTimeMillis();
+        if (plugged == 0) {
+            chargerStart = 0;
+            chargerMax = 0;
+            chargerDone = false;
+            return;
+        }
+        if (chargerStart == 0) {
+            chargerStart = now;
+            chargerMax = watts;
+            chargerDone = false;
+            return;
+        }
+        chargerMax = Math.max(chargerMax, watts);
+        if (!chargerDone && now - chargerStart > 45000 && chargerMax > 3) {
+            chargerDone = true;
+            try {
+                ChargerProfiles profiles = new ChargerProfiles(this);
+                if (profiles.match(chargerMax) == null) {
+                    profiles.add("充电器 " + (profiles.count() + 1), chargerMax);
+                }
+            } catch (Exception ignored) {
+            }
         }
     }
 

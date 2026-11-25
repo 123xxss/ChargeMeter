@@ -26,6 +26,8 @@ public class GaugeView extends View {
     private float ratio = 0f;
     private float smooth = 0f;
     private ValueAnimator animator;
+    private ValueAnimator pulseAnim;
+    private float pulse = -1f;
     private float stroke = 10f;
 
     private int cTrack = Color.parseColor("#131E2A");
@@ -111,6 +113,28 @@ public class GaugeView extends View {
         animator.start();
     }
 
+    /** 弧上流动的高光点（科技动画） */
+    void startPulse() {
+        stopPulse();
+        pulseAnim = ValueAnimator.ofFloat(0f, 1f);
+        pulseAnim.setDuration(2600);
+        pulseAnim.setRepeatCount(ValueAnimator.INFINITE);
+        pulseAnim.addUpdateListener(a -> {
+            pulse = (float) a.getAnimatedValue();
+            invalidate();
+        });
+        pulseAnim.start();
+    }
+
+    void stopPulse() {
+        if (pulseAnim != null) {
+            pulseAnim.cancel();
+            pulseAnim = null;
+        }
+        pulse = -1f;
+        invalidate();
+    }
+
     void stopAnim() {
         if (animator != null) {
             animator.cancel();
@@ -160,6 +184,17 @@ public class GaugeView extends View {
             dotPaint.setColor(Color.WHITE);
             canvas.drawCircle(px, py, dp(2.4f), dotPaint);
             dotPaint.setColor(cDot);
+        }
+
+        if (pulse >= 0f && smooth > 0.05f) {
+            float pos = (pulse % 1f) * smooth;
+            double ang = Math.toRadians(START + SWEEP * pos);
+            float r = oval.width() / 2f;
+            float hx = oval.centerX() + (float) (r * Math.cos(ang));
+            float hy = oval.centerY() + (float) (r * Math.sin(ang));
+            int alpha = (int) (200 * Math.sin(Math.PI * pulse));
+            dotPaint.setColor((cDot & 0x00FFFFFF) | ((Math.max(0, alpha) & 0xFF) << 24));
+            canvas.drawCircle(hx, hy, dp(6), dotPaint);
         }
     }
 }

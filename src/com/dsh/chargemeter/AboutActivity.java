@@ -28,12 +28,17 @@ public class AboutActivity extends Activity {
 
     private MainActivity.Theme th;
     private TextView capacityText;
+    private TextView hisBody;
+    private TextView chBody;
+    private ChargerProfiles profiles;
+    private ChargeHistory history;
     private final Handler handler = new Handler(Looper.getMainLooper());
 
     private final Runnable ticker = new Runnable() {
         @Override
         public void run() {
             updateBattery();
+            refreshLists();
             handler.postDelayed(this, 2000);
         }
     };
@@ -160,30 +165,41 @@ public class AboutActivity extends Activity {
         hisTitle.setTextSize(11);
         hisCard.addView(hisTitle);
 
-        TextView hisBody = new TextView(this);
+        hisBody = new TextView(this);
         hisBody.setTextColor(th.text);
         hisBody.setTextSize(12);
         hisBody.setTypeface(MONO);
         hisBody.setLineSpacing(dp(5), 1f);
         hisBody.setPadding(0, dp(8), 0, 0);
-        try {
-            ChargeHistory his = new ChargeHistory(this);
-            java.util.List<ChargeHistory.Row> rows = his.recent(5);
-            if (rows.isEmpty()) {
-                hisBody.setText("还没有记录，插上充电器后会自动记录");
-                hisBody.setTextColor(th.dim);
-            } else {
-                StringBuilder sb = new StringBuilder();
-                for (ChargeHistory.Row r : rows) {
-                    sb.append(ChargeHistory.format(r)).append("\n\n");
-                }
-                hisBody.setText(sb.toString().trim());
-            }
-        } catch (Exception e) {
-            hisBody.setText("读取失败");
-        }
         hisCard.addView(hisBody);
         root.addView(hisCard);
+
+        // 充电器档案
+        LinearLayout chCard = card();
+        TextView chTitle = new TextView(this);
+        chTitle.setText("充电器识别");
+        chTitle.setTextColor(th.dim);
+        chTitle.setTextSize(11);
+        chCard.addView(chTitle);
+
+        chBody = new TextView(this);
+        chBody.setTextColor(th.text);
+        chBody.setTextSize(12);
+        chBody.setTypeface(MONO);
+        chBody.setLineSpacing(dp(5), 1f);
+        chBody.setPadding(0, dp(8), 0, 0);
+        profiles = new ChargerProfiles(this);
+        history = new ChargeHistory(this);
+        chBody.setOnClickListener(v -> showChargerList(profiles));
+        chCard.addView(chBody);
+
+        TextView chHint = new TextView(this);
+        chHint.setText("系统不开放充电器厂商信息，这里按功率特征识别，重名可在列表里改");
+        chHint.setTextColor(th.dim);
+        chHint.setTextSize(10);
+        chHint.setPadding(0, dp(8), 0, 0);
+        chCard.addView(chHint);
+        root.addView(chCard);
 
         // 链接卡
         LinearLayout linkCard = card();
@@ -250,6 +266,42 @@ public class AboutActivity extends Activity {
         return tv;
     }
 
+    private void showChargerList(ChargerProfiles profiles) {
+        final java.util.List<ChargerProfiles.Row> rows = profiles.all();
+        if (rows.isEmpty()) return;
+        String[] names = new String[rows.size()];
+        for (int i = 0; i < rows.size(); i++) {
+            ChargerProfiles.Row r = rows.get(i);
+            names[i] = String.format("%s  ·  %.1f W", r.name, r.maxW);
+        }
+        new android.app.AlertDialog.Builder(this,
+                android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setTitle("给充电器命名")
+                .setItems(names, (d, which) -> renameCharger(profiles, rows.get(which)))
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
+    private void renameCharger(ChargerProfiles profiles, ChargerProfiles.Row row) {
+        final android.widget.EditText e = new android.widget.EditText(this);
+        e.setText(row.name);
+        e.setSelectAllOnFocus(true);
+        e.setPadding(dp(24), dp(16), dp(24), dp(16));
+        new android.app.AlertDialog.Builder(this,
+                android.R.style.Theme_Material_Dialog_NoActionBar)
+                .setTitle("重命名充电器")
+                .setView(e)
+                .setPositiveButton("保存", (d, w) -> {
+                    String v = e.getText().toString().trim();
+                    if (!v.isEmpty()) {
+                        profiles.rename(row.id, v);
+                        recreate();
+                    }
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
     private void openUrl(String url) {
         try {
             startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
@@ -263,12 +315,48 @@ public class AboutActivity extends Activity {
         super.onResume();
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         handler.post(ticker);
+        refreshLists();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         handler.removeCallbacks(ticker);
+    }
+
+    private void refreshLists() {
+        try {
+            java.util.List<ChargeHistory.Row> rows = history.recent(5);
+            if (rows.isEmpty()) {
+                hisBody.setText("还没有记录，插上充电器后会自动记录");
+                hisBody.setTextColor(th.dim);
+            } else {
+                StringBuilder sb = new StringBuilder();
+                for (ChargeHistory.Row r : rows) {
+                    sb.append(ChargeHistory.format(r)).append("\n\n");
+                }
+                hisBody.setText(sb.toString().trim());
+                hisBody.setTextColor(th.text);
+            }
+        } catch (Exception e) {
+            hisBody.setText("读取失败");
+        }
+        try {
+            java.util.List<ChargerProfiles.Row> list = profiles.all();
+            if (list.isEmpty()) {
+                chBody.setText("插上充电器约 45 秒后自动建档\n点条目可改名");
+                chBody.setTextColor(th.dim);
+            } else {
+                StringBuilder sb = new StringBuilder();
+                for (ChargerProfiles.Row r : list) {
+                    sb.append(String.format("%s  ·  %.1f W  ·  用过 %d 次\n", r.name, r.maxW, r.seen));
+                }
+                chBody.setText(sb.toString().trim());
+                chBody.setTextColor(th.text);
+            }
+        } catch (Exception e) {
+            chBody.setText("读取失败");
+        }
     }
 
     private void updateBattery() {

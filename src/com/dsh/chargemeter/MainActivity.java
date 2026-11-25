@@ -43,11 +43,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class MainActivity extends Activity {
@@ -105,8 +101,6 @@ public class MainActivity extends Activity {
     private double peak;
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Map<TextView, String> cardLabels = new HashMap<>();
-    private final ArrayDeque<Double> ampWindow = new ArrayDeque<>();
-    private final ArrayDeque<Double> voltWindow = new ArrayDeque<>();
     private static final int WINDOW = 5;
     private ValueAnimator powerAnim;
     private double displayedWatts = 0;
@@ -418,6 +412,12 @@ public class MainActivity extends Activity {
         scroll.addView(root, new ViewGroup.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         setContentView(scroll);
+
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 201);
+        }
 
         if (animMode == 2) {
             gauge.startPulse();
@@ -1147,14 +1147,6 @@ public class MainActivity extends Activity {
             sendBroadcast(i);
         } catch (Exception ignored) {
         }
-    }
-
-    private double median(ArrayDeque<Double> q) {
-        List<Double> list = new ArrayList<>(q);
-        if (list.isEmpty()) return 0;
-        Collections.sort(list);
-        int n = list.size();
-        return n % 2 == 1 ? list.get(n / 2) : (list.get(n / 2 - 1) + list.get(n / 2)) / 2.0;
     }
 
     private void animatePower(double target) {

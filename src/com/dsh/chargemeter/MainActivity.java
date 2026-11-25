@@ -13,7 +13,6 @@ import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.os.SystemClock;
 import android.os.Looper;
 import android.text.InputType;
 import android.text.SpannableString;
@@ -22,7 +21,6 @@ import android.text.style.AbsoluteSizeSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StyleSpan;
 import android.util.TypedValue;
-import android.view.Choreographer;
 import android.view.Display;
 import android.view.Gravity;
 import android.view.View;
@@ -51,9 +49,9 @@ public class MainActivity extends Activity {
     }
 
     static final Theme[] THEMES = {
-            new Theme("HUD 青（科幻）", 0xFF06090F, 0xFF0A121B, 0xFF16283A,
+            new Theme("科幻青", 0xFF06090F, 0xFF0A121B, 0xFF16283A,
                     0xFFE6F7FF, 0xFF5C7A90, 0xFF00E5FF, 0xFF00FFA3, true),
-            new Theme("极简白（苹果）", 0xFFF2F2F7, 0xFFFFFFFF, 0xFFE5E5EA,
+            new Theme("极简白", 0xFFF2F2F7, 0xFFFFFFFF, 0xFFE5E5EA,
                     0xFF1C1C1E, 0xFF8E8E93, 0xFF007AFF, 0xFF34C759, false),
             new Theme("赛博紫", 0xFF0B0614, 0xFF150B23, 0xFF2A1B3D,
                     0xFFF0E6FF, 0xFF8B7BA5, 0xFFB14CFF, 0xFFFF3D9A, true),
@@ -82,7 +80,6 @@ public class MainActivity extends Activity {
     private TextView rawText;
     private TextView factorText;
     private GaugeView gauge;
-    private TextView fpsText;
     private ChartView chart;
 
     private BatteryManager bm;
@@ -94,11 +91,6 @@ public class MainActivity extends Activity {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private final Map<TextView, String> cardLabels = new HashMap<>();
 
-    private Choreographer choreographer;
-    private Choreographer.FrameCallback fpsCallback;
-    private long fpsWindowStart;
-    private int fpsFrames;
-    private double fpsValue;
     private float screenHz;
 
     private final Runnable ticker = new Runnable() {
@@ -148,10 +140,10 @@ public class MainActivity extends Activity {
         LinearLayout titleBox = new LinearLayout(this);
         titleBox.setOrientation(LinearLayout.VERTICAL);
         TextView title = new TextView(this);
-        title.setText("CHARGE MONITOR");
+        title.setText("充电监视");
         title.setTextColor(th.a1);
         title.setTextSize(13);
-        title.setLetterSpacing(0.28f);
+        title.setLetterSpacing(0.08f);
         title.setTypeface(MONO, Typeface.BOLD);
         titleBox.addView(title);
         TextView subtitle = new TextView(this);
@@ -276,13 +268,13 @@ public class MainActivity extends Activity {
 
         // ===== 指标 =====
         LinearLayout grid1 = row();
-        grid1.addView(card("CURRENT 电流", "--"), weight());
-        grid1.addView(card("VOLTAGE 电压", "--"), weight());
+        grid1.addView(card("电流", "--"), weight());
+        grid1.addView(card("电压", "--"), weight());
         root.addView(grid1);
 
         LinearLayout grid2 = row();
-        grid2.addView(card("TEMP 温度", "--"), weight());
-        grid2.addView(card("PEAK 峰值", "--"), weight());
+        grid2.addView(card("温度", "--"), weight());
+        grid2.addView(card("峰值", "--"), weight());
         root.addView(grid2);
 
         // ===== 曲线 =====
@@ -299,20 +291,18 @@ public class MainActivity extends Activity {
         chartHead.setOrientation(LinearLayout.HORIZONTAL);
         chartHead.setGravity(Gravity.CENTER_VERTICAL);
         TextView chartTitle = new TextView(this);
-        chartTitle.setText("POWER CURVE · 2MIN");
+        chartTitle.setText("功率曲线");
         chartTitle.setTextColor(th.text);
         chartTitle.setTextSize(11);
-        chartTitle.setLetterSpacing(0.2f);
+        chartTitle.setLetterSpacing(0.04f);
         chartTitle.setTypeface(MONO, Typeface.BOLD);
         chartHead.addView(chartTitle, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        fpsText = new TextView(this);
-        fpsText.setText("-- FPS");
-        fpsText.setTextColor(th.a2);
-        fpsText.setTextSize(11);
-        fpsText.setTypeface(MONO, Typeface.BOLD);
-        fpsText.setLetterSpacing(0.06f);
-        chartHead.addView(fpsText);
+        TextView chartHint = new TextView(this);
+        chartHint.setText("最近 2 分钟");
+        chartHint.setTextColor(th.dim);
+        chartHint.setTextSize(10);
+        chartHead.addView(chartHint);
         chartCard.addView(chartHead);
 
         chart = new ChartView(this);
@@ -348,25 +338,6 @@ public class MainActivity extends Activity {
         } catch (Exception ignored) {
         }
 
-        choreographer = Choreographer.getInstance();
-        fpsCallback = new Choreographer.FrameCallback() {
-            @Override
-            public void doFrame(long frameTimeNanos) {
-                fpsFrames++;
-                long now = SystemClock.uptimeMillis();
-                if (fpsWindowStart == 0) fpsWindowStart = now;
-                long span = now - fpsWindowStart;
-                if (span >= 1000) {
-                    fpsValue = fpsFrames * 1000.0 / span;
-                    fpsFrames = 0;
-                    fpsWindowStart = now;
-                    if (fpsText != null) {
-                        fpsText.setText(String.format("%.0f FPS", fpsValue));
-                    }
-                }
-                choreographer.postFrameCallback(this);
-            }
-        };
     }
 
     private void pickTheme() {
@@ -454,6 +425,16 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    private String techText(String tech) {
+        if (tech == null || tech.isEmpty()) return "";
+        if (tech.equalsIgnoreCase("Li-ion")) return "锂离子电池";
+        if (tech.equalsIgnoreCase("Li-poly")) return "聚合物锂电池";
+        if (tech.equalsIgnoreCase("LiFe")) return "磷酸铁锂";
+        if (tech.equalsIgnoreCase("NiMH")) return "镍氢电池";
+        if (tech.equalsIgnoreCase("NiCd")) return "镍镉电池";
+        return tech;
+    }
+
     private int recommendedCells() {
         String b = (Build.BRAND + " " + Build.MANUFACTURER + " " + Build.MODEL).toLowerCase();
         if (b.contains("xiaomi") || b.contains("redmi") || b.contains("poco")
@@ -505,7 +486,7 @@ public class MainActivity extends Activity {
         String full = label + "\n" + value;
         SpannableString ss = new SpannableString(full);
         int cut = label.length();
-        ss.setSpan(new AbsoluteSizeSpan(9, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new AbsoluteSizeSpan(10, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new ForegroundColorSpan(th.dim), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new StyleSpan(Typeface.BOLD), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new AbsoluteSizeSpan(19, true), cut + 1, full.length(),
@@ -525,20 +506,12 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         handler.post(ticker);
-        if (choreographer != null && fpsCallback != null) {
-            fpsWindowStart = 0;
-            fpsFrames = 0;
-            choreographer.postFrameCallback(fpsCallback);
-        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         handler.removeCallbacks(ticker);
-        if (choreographer != null && fpsCallback != null) {
-            choreographer.removeFrameCallback(fpsCallback);
-        }
     }
 
     private void tick() {
@@ -582,7 +555,7 @@ public class MainActivity extends Activity {
         }
         powerUnit.setTextColor(th.dim);
         if (powerCaption != null) {
-            powerCaption.setText(feeding ? "CHARGE / 充入功率" : "DISCHARGE / 放电功率");
+            powerCaption.setText(feeding ? "充入功率" : "放电功率");
         }
 
         updateCard(currentText, String.format("%.2f A", amps));
@@ -598,29 +571,29 @@ public class MainActivity extends Activity {
         gauge.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
         chart.push(feeding && valid ? (float) watts : 0f);
 
-        levelText.setText((level >= 0 ? level + "%" : "--")
-                + (tech == null || tech.isEmpty() ? "" : " · " + tech)
-                + String.format(" · %d 电芯 × %.2f", cellCount, ratio)
-                + (screenHz > 0 ? String.format(" · %.0f Hz", screenHz) : ""));
+        levelText.setText("电量 " + (level >= 0 ? level + "%" : "--")
+                + (techText(tech).isEmpty() ? "" : " · " + techText(tech))
+                + String.format(" · %d 电芯 · 倍率 %.2f", cellCount, ratio)
+                + (screenHz > 0 ? String.format(" · 刷新率 %.0fHz", screenHz) : ""));
 
         String chip;
         int chipColor;
         if (status == BatteryManager.BATTERY_STATUS_CHARGING && !feeding) {
-            chip = "FULL";
+            chip = "已充满";
             chipColor = th.a1;
         } else if (status == BatteryManager.BATTERY_STATUS_CHARGING) {
-            chip = plugged == BatteryManager.BATTERY_PLUGGED_USB ? "USB"
-                    : plugged == BatteryManager.BATTERY_PLUGGED_AC ? "CHARGING"
-                    : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "WIRELESS" : "CHARGING";
+            chip = plugged == BatteryManager.BATTERY_PLUGGED_USB ? "数据线充电"
+                    : plugged == BatteryManager.BATTERY_PLUGGED_AC ? "充电中"
+                    : plugged == BatteryManager.BATTERY_PLUGGED_WIRELESS ? "无线充电" : "充电中";
             chipColor = th.a2;
         } else if (status == BatteryManager.BATTERY_STATUS_FULL) {
-            chip = "FULL";
+            chip = "已充满";
             chipColor = th.a1;
         } else if (plugged != 0) {
-            chip = "PLUGGED";
+            chip = "已接电源";
             chipColor = th.a1;
         } else {
-            chip = "IDLE";
+            chip = "未充电";
             chipColor = th.dim;
         }
         stateLabel.setText(chip);
@@ -641,27 +614,27 @@ public class MainActivity extends Activity {
             tier = "";
             tierColor = th.dim;
         } else if (watts < 10) {
-            tier = "TAPER  涓流";
+            tier = "涓流充电";
             tierColor = th.dim;
         } else if (watts < 30) {
-            tier = "STANDARD  标准";
+            tier = "标准充电";
             tierColor = th.a1;
         } else if (watts < 60) {
-            tier = "FAST  快充";
+            tier = "快速充电";
             tierColor = th.a2;
         } else {
-            tier = "TURBO  超快充";
+            tier = "超快充电";
             tierColor = th.a2;
         }
         tierText.setText(tier);
         tierText.setTextColor(tierColor);
 
         if (!currentSupported) {
-            rawText.setText("该机型未开放实时电流（CURRENT_NOW 不可用）");
+            rawText.setText("该机型未开放实时电流");
         } else if (!valid) {
-            rawText.setText(String.format("RAW %d µA · %d mV · 电压上报异常，建议校准", raw, voltageMv));
+            rawText.setText(String.format("原始 %d 微安 · %d 毫伏 · 电压异常，请校准", raw, voltageMv));
         } else {
-            rawText.setText(String.format("RAW %d µA · %.3f A · %d mV · 1s", raw, amps, voltageMv));
+            rawText.setText(String.format("原始 %d 微安 · %.3f 安 · %d 毫伏 · 每秒刷新", raw, amps, voltageMv));
         }
     }
 

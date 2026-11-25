@@ -2,7 +2,6 @@
 [![Download APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-APK%20v5.1-00C853?logo=android&logoColor=white)](https://github.com/123xxss/ChargeMeter/releases/download/v5.1/ChargeMeter_v5.1.apk)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-[![Build](https://github.com/123xxss/ChargeMeter/actions/workflows/build.yml/badge.svg)](https://github.com/123xxss/ChargeMeter/actions/workflows/build.yml)
 
 # ChargeMeter · 充电功率
 

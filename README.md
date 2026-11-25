@@ -1,3 +1,9 @@
+[![Release](https://img.shields.io/github/v/release/123xxss/ChargeMeter?color=00C853)](https://github.com/123xxss/ChargeMeter/releases)
+[![Download APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-APK%20v5.1-00C853?logo=android&logoColor=white)](https://github.com/123xxss/ChargeMeter/releases/download/v5.1/ChargeMeter_v5.1.apk)
+![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
+[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+[![Build](https://github.com/123xxss/ChargeMeter/actions/workflows/build.yml/badge.svg)](https://github.com/123xxss/ChargeMeter/actions/workflows/build.yml)
+
 # ChargeMeter · 充电功率
 
 一个干净、没有广告和联网权限的 Android 实时充电功率监视器。用系统 `BatteryService` 的电池侧数据实时计算功率，环形仪表 + 曲线 + 多套主题，适配国产 ROM 的双电芯快充。
@@ -80,7 +86,7 @@ ANDROID_SDK_ROOT=$HOME/android/sdk QEMU=qemu-x86_64-static bash build.sh
 
 首次构建会自动生成 `signing.keystore`（口令 `android`）。**正式发布请换成你自己的 keystore，并把 `signing.keystore` 排除在仓库外**（`.gitignore` 已包含）。
 
-## 安装
+> 直接下载：[**ChargeMeter_v5.1.apk**](https://github.com/123xxss/ChargeMeter/releases/download/v5.1/ChargeMeter_v5.1.apk)（Release 附件）
 
 ```bash
 adb install -r chargemeter.apk

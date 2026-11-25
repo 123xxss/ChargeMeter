@@ -1,0 +1,46 @@
+name: 机型兼容性反馈
+description: 某机型读数不准 / 读不到数据时报这里
+title: "[兼容性] 品牌 型号"
+labels: ["compatibility"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈！请尽量填全，尤其是「软件显示」和「系统显示」的对比，这能快速定位是电芯数还是电压上报的问题。
+  - type: input
+    id: device
+    attributes:
+      label: 手机型号
+      placeholder: 例如 iQOO Neo9S Pro / 小米 14 / OPPO Find X7
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: 系统版本
+      placeholder: 例如 OriginOS 5 / Android 16
+  - type: dropdown
+    id: cells
+    attributes:
+      label: 电芯数（校准里设的值）
+      options: ["1", "2", "不确定"]
+    validations:
+      required: true
+  - type: input
+    id: shown
+    attributes:
+      label: 软件显示 vs 系统显示
+      placeholder: 例如 软件 5.13 W，系统充电界面显示 45 W
+    validations:
+      required: true
+  - type: textarea
+    id: raw
+    attributes:
+      label: 界面底部「原始 …」那一行
+      placeholder: 原始 -490000 微安 · -0.490 安 · 4042 毫伏 · 每秒刷新
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: 补充说明 / 截图

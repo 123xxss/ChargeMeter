@@ -351,7 +351,6 @@ public class MainActivity extends Activity {
         chartCard.setOrientation(LinearLayout.VERTICAL);
         chartCard.setPadding(dp(16), dp(14), dp(16), dp(10));
         chartCard.setBackground(panelStroke(dp(24)));
-        if (!th.dark) chartCard.setElevation(dp(2));
         LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cclp.topMargin = dp(12);
@@ -363,15 +362,18 @@ public class MainActivity extends Activity {
         TextView chartTitle = new TextView(this);
         chartTitle.setText("功率曲线");
         chartTitle.setTextColor(th.text);
-        chartTitle.setTextSize(11);
-        chartTitle.setLetterSpacing(0.04f);
-        chartTitle.setTypeface(MONO, Typeface.BOLD);
+        chartTitle.setTextSize(14);
+        chartTitle.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        chartTitle.setMaxLines(1);
+        chartTitle.setEllipsize(android.text.TextUtils.TruncateAt.END);
         chartHead.addView(chartTitle, new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
         TextView chartHint = new TextView(this);
         chartHint.setText("最近 2 分钟");
         chartHint.setTextColor(th.dim);
-        chartHint.setTextSize(10);
+        chartHint.setTextSize(11);
+        chartHint.setMaxLines(1);
+        chartHint.setEllipsize(android.text.TextUtils.TruncateAt.END);
         chartHead.addView(chartHint);
         chartCard.addView(chartHead);
 
@@ -501,7 +503,6 @@ public class MainActivity extends Activity {
         bg.setCornerRadius(dp(14));
         bg.setStroke(dp(1), th.line);
         b.setBackground(bg);
-        if (!th.dark) b.setElevation(dp(2));
         b.setTextColor(th.a1);
         return b;
     }

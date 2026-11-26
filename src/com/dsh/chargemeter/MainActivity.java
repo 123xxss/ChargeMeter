@@ -201,6 +201,8 @@ public class MainActivity extends Activity {
         stateChip.addView(stateDot, new LinearLayout.LayoutParams(dp(6), dp(6)));
         stateLabel = new TextView(this);
         stateLabel.setTextSize(10);
+        stateLabel.setMaxLines(1);
+        stateLabel.setEllipsize(android.text.TextUtils.TruncateAt.END);
         stateLabel.setTypeface(MONO, Typeface.BOLD);
         stateLabel.setLetterSpacing(0.06f);
         stateLabel.setPadding(dp(6), 0, 0, 0);
@@ -389,7 +391,9 @@ public class MainActivity extends Activity {
         levelText.setTextColor(th.dim);
         levelText.setTextSize(10);
         levelText.setGravity(Gravity.CENTER);
-        levelText.setPadding(0, dp(14), 0, 0);
+        levelText.setPadding(dp(8), dp(14), dp(8), 0);
+        levelText.setMaxLines(1);
+        levelText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         root.addView(levelText);
 
         LinearLayout actionRow = new LinearLayout(this);
@@ -421,7 +425,9 @@ public class MainActivity extends Activity {
         rawText.setTextColor(th.dark ? (th.dim & 0x00FFFFFF) | 0x99000000 : 0xFFA1A1A6);
         rawText.setTypeface(MONO);
         rawText.setGravity(Gravity.CENTER);
-        rawText.setPadding(0, dp(6), 0, 0);
+        rawText.setPadding(dp(8), dp(6), dp(8), 0);
+        rawText.setMaxLines(1);
+        rawText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         root.addView(rawText);
 
         scroll.addView(root, new ViewGroup.LayoutParams(
@@ -990,9 +996,8 @@ public class MainActivity extends Activity {
         updateCountdown(level, voltageMv, watts, feeding, valid);
 
         levelText.setText("电量 " + (level >= 0 ? level + "%" : "--")
-                + (techText(tech).isEmpty() ? "" : " · " + techText(tech))
                 + String.format(" · %d 电芯 · 倍率 %.2f", cellCount, ratio)
-                + (screenHz > 0 ? String.format(" · 刷新率 %.0fHz", screenHz) : ""));
+                + (screenHz > 0 ? String.format(" · %.0fHz", screenHz) : ""));
 
         String chip;
         int chipColor;

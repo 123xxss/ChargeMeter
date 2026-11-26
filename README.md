@@ -1,5 +1,5 @@
 [![Release](https://img.shields.io/github/v/release/123xxss/ChargeMeter?color=00C853)](https://github.com/123xxss/ChargeMeter/releases)
-[![Download APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-APK%20v7.5-00C853?logo=android&logoColor=white)](https://github.com/123xxss/ChargeMeter/releases/download/v7.5/ChargeMeter_v7.5.apk)
+[![Download APK](https://img.shields.io/badge/%E4%B8%8B%E8%BD%BD-APK%20v8.1-00C853?logo=android&logoColor=white)](https://github.com/123xxss/ChargeMeter/releases/download/v8.1/ChargeMeter_v8.1.apk)
 ![Android](https://img.shields.io/badge/Android-10%2B-3DDC84?logo=android&logoColor=white)
 [![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
 
@@ -13,9 +13,10 @@
 
 - **实时功率**（保留两位小数），充入显示绿色、放电显示青色
 - **电流 / 电压 / 温度 / 峰值** 四宫格，等宽字体，数据每秒刷新
-- **环形仪表**：270° 刻度弧，功率越高弧越长
+- **大数字读数 + 水平功率条**：84sp 主数字，下方渐变功率条
 - **功率曲线**：最近 2 分钟趋势，霓虹渐变填充
-- **5 套主题**：科幻青、极简白、赛博紫、终端绿、熔岩橙，自绘选择面板（色块预览 + 当前项标记）
+- **5 套主题**：OriginOS 原子、科幻青、赛博紫、终端绿、熔岩橙，自绘选择面板（色块预览 + 当前项标记）
+- **OriginOS 风格**：白卡片 + 柔和阴影 + vivo 蓝强调色，无边框、大留白
 - **充电等级**：涓流 / 标准 / 快速 / 超快 自动判定
 - **全中文界面**，单位使用 W / A / V 等标准符号
 - **校准**：电芯数（1~4）与倍率（0.1~10）可调；**电芯数可自动识别**（charge counter 增量与电流比值，连续两次一致才采纳）
@@ -97,7 +98,7 @@ ANDROID_SDK_ROOT=$HOME/android/sdk QEMU=qemu-x86_64-static bash build.sh
 
 首次构建会自动生成 `signing.keystore`（口令 `android`）。**正式发布请换成你自己的 keystore，并把 `signing.keystore` 排除在仓库外**（`.gitignore` 已包含）。
 
-> 直接下载：[**ChargeMeter_v5.1.apk**](https://github.com/123xxss/ChargeMeter/releases/download/v7.5/ChargeMeter_v7.5.apk)（Release 附件）
+> 直接下载：[**ChargeMeter_v5.1.apk**](https://github.com/123xxss/ChargeMeter/releases/download/v8.1/ChargeMeter_v8.1.apk)（Release 附件）
 
 ```bash
 adb install -r chargemeter.apk

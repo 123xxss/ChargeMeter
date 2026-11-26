@@ -61,8 +61,8 @@ public class MainActivity extends Activity {
     static final Theme[] THEMES = {
             new Theme("科幻青", 0xFF06090F, 0xFF0A121B, 0xFF16283A,
                     0xFFE6F7FF, 0xFF5C7A90, 0xFF00E5FF, 0xFF00FFA3, true),
-            new Theme("极简白", 0xFFF2F2F7, 0xFFFFFFFF, 0xFFE5E5EA,
-                    0xFF1C1C1E, 0xFF8E8E93, 0xFF007AFF, 0xFF34C759, false),
+            new Theme("OriginOS 原子", 0xFFF4F5F7, 0xFFFFFFFF, 0xFFEAECF0,
+                    0xFF1B1E23, 0xFF8A8F99, 0xFF4D6BFE, 0xFF4D6BFE, false),
             new Theme("赛博紫", 0xFF0B0614, 0xFF150B23, 0xFF2A1B3D,
                     0xFFF0E6FF, 0xFF8B7BA5, 0xFFB14CFF, 0xFFFF3D9A, true),
             new Theme("终端绿", 0xFF000000, 0xFF04120A, 0xFF12301B,
@@ -90,7 +90,7 @@ public class MainActivity extends Activity {
     private TextView rawText;
     private TextView factorText;
     private TextView countdownText;
-    private GaugeView gauge;
+    private BarView bar;
     private ChartView chart;
 
     private BatteryManager bm;
@@ -234,47 +234,27 @@ public class MainActivity extends Activity {
         head.addView(setBtn);
         root.addView(head);
 
-        // ===== 仪表盘 =====
-        FrameLayout gaugeBox = new FrameLayout(this);
-        LinearLayout.LayoutParams gbp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, dp(256));
-        gbp.topMargin = dp(4);
-        gaugeBox.setLayoutParams(gbp);
-
-        gauge = new GaugeView(this);
-        gauge.setTheme(th.dark ? th.line : 0xFFE5E5EA, th.a1, th.a2, th.a2,
-                th.a2, th.dark ? th.line : 0xFFD1D1D6, (th.a2 & 0x00FFFFFF) | 0x26000000);
-        gaugeBox.addView(gauge, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
-
-        LinearLayout center = new LinearLayout(this);
-        center.setOrientation(LinearLayout.VERTICAL);
-        center.setGravity(Gravity.CENTER);
-        FrameLayout.LayoutParams clp = new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
-                Gravity.CENTER);
-        clp.topMargin = dp(10);
+        // ===== 主读数区 =====
+        LinearLayout hero = new LinearLayout(this);
+        hero.setOrientation(LinearLayout.VERTICAL);
+        hero.setGravity(Gravity.CENTER);
+        LinearLayout.LayoutParams hlp2 = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        hlp2.topMargin = dp(30);
+        hero.setLayoutParams(hlp2);
 
         powerCaption = new TextView(this);
         powerCaption.setText("充入功率");
         powerCaption.setTextColor(th.dim);
-        powerCaption.setTextSize(11);
-        powerCaption.setLetterSpacing(0.16f);
+        powerCaption.setTextSize(12);
+        powerCaption.setLetterSpacing(0.14f);
         powerCaption.setGravity(Gravity.CENTER);
-        center.addView(powerCaption);
+        hero.addView(powerCaption);
 
         LinearLayout powerRow = new LinearLayout(this);
         powerRow.setOrientation(LinearLayout.HORIZONTAL);
         powerRow.setGravity(Gravity.BOTTOM);
-        powerRow.setPadding(0, dp(2), 0, 0);
-
-        powerText = new TextView(this);
-        powerText.setText("--");
-        powerText.setTextColor(th.a2);
-        powerText.setTextSize(46);
-        powerText.setTypeface(MONO, Typeface.BOLD);
-        powerText.setIncludeFontPadding(false);
-        powerRow.addView(powerText);
+        powerRow.setPadding(0, dp(6), 0, 0);
 
         GestureDetector gd = new GestureDetector(this,
                 new GestureDetector.SimpleOnGestureListener() {
@@ -284,6 +264,14 @@ public class MainActivity extends Activity {
                         return true;
                     }
                 });
+        powerText = new TextView(this);
+        powerText.setText("--");
+        powerText.setTextColor(th.a2);
+        powerText.setTextSize(84);
+        powerText.setTypeface(Typeface.create(
+                th.dark ? "sans-serif-thin" : "sans-serif-medium", Typeface.NORMAL));
+        powerText.setIncludeFontPadding(false);
+        powerText.setLetterSpacing(-0.02f);
         powerText.setOnTouchListener((v, ev) -> {
             gd.onTouchEvent(ev);
             return true;
@@ -299,42 +287,49 @@ public class MainActivity extends Activity {
             }
             return true;
         });
+        powerRow.addView(powerText);
 
         powerUnit = new TextView(this);
-        powerUnit.setText(" W");
+        powerUnit.setText("W");
         powerUnit.setTextColor(th.dim);
-        powerUnit.setTextSize(17);
-        powerUnit.setTypeface(MONO);
-        powerUnit.setPadding(0, 0, 0, dp(8));
+        powerUnit.setTextSize(22);
+        powerUnit.setPadding(dp(6), 0, 0, dp(14));
         powerRow.addView(powerUnit);
-        center.addView(powerRow);
+        hero.addView(powerRow);
 
         tierText = new TextView(this);
         tierText.setText("");
         tierText.setTextSize(11);
-        tierText.setTypeface(MONO, Typeface.BOLD);
-        tierText.setLetterSpacing(0.12f);
+        tierText.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        tierText.setLetterSpacing(0.1f);
         tierText.setGravity(Gravity.CENTER);
-        tierText.setPadding(0, dp(6), 0, 0);
-        center.addView(tierText);
+        tierText.setPadding(0, dp(2), 0, 0);
+        hero.addView(tierText);
+
+        countdownText = new TextView(this);
+        countdownText.setTextColor(th.a1);
+        countdownText.setTextSize(12);
+        countdownText.setGravity(Gravity.CENTER);
+        countdownText.setPadding(0, dp(8), 0, 0);
+        hero.addView(countdownText);
+        root.addView(hero);
+
+        bar = new BarView(this);
+        bar.setTheme(th.a1, th.a2, th.dark ? th.line : 0xFFE5E5EA);
+        LinearLayout.LayoutParams blp2 = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, dp(10));
+        blp2.topMargin = dp(18);
+        blp2.leftMargin = dp(2);
+        blp2.rightMargin = dp(2);
+        bar.setLayoutParams(blp2);
+        root.addView(bar);
 
         factorText = new TextView(this);
         factorText.setTextColor(th.dim);
         factorText.setTextSize(10);
         factorText.setGravity(Gravity.CENTER);
-        factorText.setPadding(0, dp(4), 0, 0);
-        center.addView(factorText);
-
-        countdownText = new TextView(this);
-        countdownText.setTextColor(th.a1);
-        countdownText.setTextSize(11);
-        countdownText.setTypeface(MONO);
-        countdownText.setGravity(Gravity.CENTER);
-        countdownText.setPadding(0, dp(10), 0, 0);
-        center.addView(countdownText);
-
-        gaugeBox.addView(center, clp);
-        root.addView(gaugeBox);
+        factorText.setPadding(0, dp(10), 0, 0);
+        root.addView(factorText);
 
         // ===== 指标 =====
         LinearLayout grid1 = row();
@@ -351,7 +346,8 @@ public class MainActivity extends Activity {
         LinearLayout chartCard = new LinearLayout(this);
         chartCard.setOrientation(LinearLayout.VERTICAL);
         chartCard.setPadding(dp(16), dp(14), dp(16), dp(10));
-        chartCard.setBackground(panelStroke(dp(12)));
+        chartCard.setBackground(panelStroke(dp(24)));
+        if (!th.dark) chartCard.setElevation(dp(2));
         LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cclp.topMargin = dp(12);
@@ -501,6 +497,7 @@ public class MainActivity extends Activity {
         bg.setCornerRadius(dp(14));
         bg.setStroke(dp(1), th.line);
         b.setBackground(bg);
+        if (!th.dark) b.setElevation(dp(2));
         b.setTextColor(th.a1);
         return b;
     }
@@ -583,7 +580,9 @@ public class MainActivity extends Activity {
         GradientDrawable d = new GradientDrawable();
         d.setColor(th.panel);
         d.setCornerRadius(dp(radiusDp));
-        d.setStroke(dp(1), th.line);
+        if (th.dark) {
+            d.setStroke(dp(1), th.line);
+        }
         return d;
     }
 
@@ -885,10 +884,10 @@ public class MainActivity extends Activity {
         String full = label + "\n" + value;
         SpannableString ss = new SpannableString(full);
         int cut = label.length();
-        ss.setSpan(new AbsoluteSizeSpan(10, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new AbsoluteSizeSpan(11, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new ForegroundColorSpan(th.dim), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new StyleSpan(Typeface.BOLD), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new AbsoluteSizeSpan(19, true), cut + 1, full.length(),
+        ss.setSpan(new StyleSpan(Typeface.NORMAL), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new AbsoluteSizeSpan(20, true), cut + 1, full.length(),
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new ForegroundColorSpan(th.text), cut + 1, full.length(),
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -912,7 +911,7 @@ public class MainActivity extends Activity {
         super.onPause();
         handler.removeCallbacks(ticker);
         if (powerAnim != null) powerAnim.cancel();
-        if (gauge != null) gauge.stopAnim();
+        if (bar != null) bar.stopAnim();
     }
 
     private void tick() {
@@ -976,7 +975,7 @@ public class MainActivity extends Activity {
         updateCard(peakText, peak > 0 ? String.format("%.2f W", peak) : "--");
 
         double gaugeMax = Math.max(20, peak * 1.15);
-        gauge.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
+        bar.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
         if (feeding && valid) {
             chart.push((float) watts);
         }

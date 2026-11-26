@@ -36,7 +36,7 @@ public class ChargeWatchService extends Service {
         public void run() {
             updateOngoing();
             check();
-            handler.postDelayed(this, 5000);
+            handler.postDelayed(this, 2000);
         }
     };
 
@@ -107,10 +107,13 @@ public class ChargeWatchService extends Service {
             int voltage = it.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 4000);
             BatteryManager bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
             long raw = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_NOW);
+            android.content.SharedPreferences cfg = getSharedPreferences("cfg", MODE_PRIVATE);
+            int cells = cfg.contains("cells") ? cfg.getInt("cells", 1) : 1;
+            float ratio = cfg.getFloat("ratio", 1.0f);
             double watts = 0;
             if (raw != Long.MIN_VALUE && raw != 0) {
                 double amps = raw / 1_000_000.0;
-                watts = Math.abs(amps) * (voltage / 1000.0);
+                watts = Math.abs(amps) * (voltage / 1000.0) * cells * ratio;
                 if (watts > 400) watts /= 1000.0;
             }
             Notification n = new Notification.Builder(this, CH_ONGOING)

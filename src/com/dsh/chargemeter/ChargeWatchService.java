@@ -36,7 +36,7 @@ public class ChargeWatchService extends Service {
         public void run() {
             updateOngoing();
             check();
-            handler.postDelayed(this, 2000);
+            handler.postDelayed(this, 1000);
         }
     };
 

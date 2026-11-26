@@ -352,7 +352,7 @@ public class MainActivity extends Activity {
         LinearLayout chartCard = new LinearLayout(this);
         chartCard.setOrientation(LinearLayout.VERTICAL);
         chartCard.setPadding(dp(16), dp(14), dp(16), dp(10));
-        chartCard.setBackground(panelStroke(dp(24)));
+        chartCard.setBackground(panelStroke(0));
         LinearLayout.LayoutParams cclp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         cclp.topMargin = dp(12);

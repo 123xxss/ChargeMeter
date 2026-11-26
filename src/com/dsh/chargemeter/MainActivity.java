@@ -143,7 +143,8 @@ public class MainActivity extends Activity {
 
         bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
         cfg = getSharedPreferences("cfg", Context.MODE_PRIVATE);
-        cellCount = cfg.contains("cells") ? cfg.getInt("cells", 1) : recommendedCells();
+        cellsManual = cfg.getBoolean("cells_manual", false);
+        cellCount = cellsManual ? cfg.getInt("cells", recommendedCells()) : recommendedCells();
         ratio = cfg.getFloat("ratio", 1.0f);
         cellsManual = cfg.getBoolean("cells_manual", false);
         history = new ChargeHistory(this);
@@ -1052,7 +1053,6 @@ public class MainActivity extends Activity {
         tierText.setText(tier);
         tierText.setTextColor(tierColor);
 
-        updateCellsAuto(counter, amps);
         updateCharger(plugged, watts);
         updateHistory(charging, plugged, level, watts, counter);
         maybeStartWatch(charging, plugged);

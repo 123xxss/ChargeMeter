@@ -9,6 +9,12 @@
 
 ![截图](docs/screenshot.png)
 
+## 宣传视频
+
+[![宣传视频](docs/screenshot.png)](docs/promo.mp4)
+
+> 18 秒功能演示：[docs/promo.mp4](docs/promo.mp4)（点击预览或下载）
+
 ## 功能
 
 - **实时功率**（保留两位小数），充入显示绿色、放电显示青色

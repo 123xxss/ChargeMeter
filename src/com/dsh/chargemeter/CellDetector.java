@@ -44,8 +44,8 @@ class CellDetector {
         }
         double impliedAmps = dCounterMah / hours;
         double k = impliedAmps / avgAmps;
-        if (k > 1.55 && k < 2.6) result = 2;
-        else if (k > 0.6 && k < 1.45) result = 1;
+        if (k > 1.75 && k < 2.30) result = 2;
+        else if (k > 0.85 && k < 1.20) result = 1;
         reset();
         return result;
     }

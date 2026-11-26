@@ -116,6 +116,9 @@ public class MainActivity extends Activity {
     private int sessionSamples = 0;
     private long lastHistoryWrite = 0;
     private boolean cellsManual = false;
+    private int pendingCells = 0;
+    private int pendingCellsCount = 0;
+    private boolean firstPowerFrame = true;
     private ChargerProfiles chargers;
     private boolean chargerSession = false;
     private long chargerStartTs = 0;
@@ -625,6 +628,15 @@ public class MainActivity extends Activity {
         LinearLayout panel = dialogPanel();
         panel.addView(dialogTitle("校准"));
 
+        if (isHuaweiFamily()) {
+            TextView warn = new TextView(this);
+            warn.setText("华为/荣耀机型充电协议较特殊，读数偏差大时请用下方「自动校准」");
+            warn.setTextColor(0xFFFF9F0A);
+            warn.setTextSize(11);
+            warn.setPadding(dp(4), 0, 0, dp(8));
+            panel.addView(warn);
+        }
+
         TextView tip = new TextView(this);
         tip.setText("推荐 " + recommendedCells() + " 电芯 · " + Build.MANUFACTURER + " " + Build.MODEL);
         tip.setTextColor(th.a1);
@@ -664,6 +676,14 @@ public class MainActivity extends Activity {
         hint.setTextSize(10);
         hint.setPadding(dp(4), dp(6), 0, 0);
         panel.addView(hint);
+
+        TextView autoBtn = new TextView(this);
+        autoBtn.setText("自动校准（对比手机显示的瓦数）");
+        autoBtn.setTextColor(th.a1);
+        autoBtn.setTextSize(12);
+        autoBtn.setPadding(dp(4), dp(16), 0, 0);
+        autoBtn.setOnClickListener(v -> showAutoCalibrate());
+        panel.addView(autoBtn);
 
         LinearLayout btnRow = new LinearLayout(this);
         btnRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -756,13 +776,103 @@ public class MainActivity extends Activity {
 
     private int recommendedCells() {
         String b = (Build.BRAND + " " + Build.MANUFACTURER + " " + Build.MODEL).toLowerCase();
+        // 国产快充机型（67W 以上基本是双电芯串联）
         if (b.contains("xiaomi") || b.contains("redmi") || b.contains("poco")
                 || b.contains("oppo") || b.contains("oneplus") || b.contains("realme")
-                || b.contains("vivo") || b.contains("iqoo")
-                || b.contains("honor") || b.contains("huawei")) {
+                || b.contains("vivo") || b.contains("iqoo")) {
             return 2;
         }
+        if (b.contains("honor")) return 2;
+        // 三星 / 谷歌 / 索尼 / 摩托 等以单电芯为主
         return 1;
+    }
+
+    private boolean isHuaweiFamily() {
+        String b = (Build.BRAND + " " + Build.MANUFACTURER).toLowerCase();
+        return b.contains("huawei") || b.contains("harmony");
+    }
+
+    /** 自动校准：让用户把手机系统显示的瓦数填进来，反推校准倍率 */
+    private void showAutoCalibrate() {
+        LinearLayout panel = dialogPanel();
+        panel.addView(dialogTitle("自动校准"));
+
+        TextView cur = new TextView(this);
+        cur.setText(String.format("当前读数：%.2f W（%d 电芯 · 倍率 %.2f）",
+                displayedWatts, cellCount, ratio));
+        cur.setTextColor(th.a1);
+        cur.setTextSize(13);
+        cur.setPadding(dp(4), 0, 0, dp(14));
+        panel.addView(cur);
+
+        TextView l1 = new TextView(this);
+        l1.setText("手机系统/充电器上显示的瓦数");
+        l1.setTextColor(th.dim);
+        l1.setTextSize(12);
+        l1.setPadding(dp(4), 0, 0, dp(6));
+        panel.addView(l1);
+
+        EditText e = new EditText(this);
+        e.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
+        e.setHint("例如 67");
+        styleInput(e);
+        panel.addView(e);
+
+        TextView hint = new TextView(this);
+        hint.setText("填 0 或留空则保持当前倍率");
+        hint.setTextColor(th.dim);
+        hint.setTextSize(10);
+        hint.setPadding(dp(4), dp(6), 0, 0);
+        panel.addView(hint);
+
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams blp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        blp.topMargin = dp(18);
+        btnRow.setLayoutParams(blp);
+
+        LinearLayout.LayoutParams half = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        TextView cancel = pillButton("取消", false);
+        btnRow.addView(cancel, half);
+
+        LinearLayout.LayoutParams half2 = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        half2.leftMargin = dp(10);
+        TextView ok = pillButton("开始校准", true);
+        btnRow.addView(ok, half2);
+        panel.addView(btnRow);
+
+        final Dialog dlg = themedDialog(panel);
+        cancel.setOnClickListener(v -> dlg.dismiss());
+        ok.setOnClickListener(v -> {
+            double target;
+            try {
+                target = Double.parseDouble(e.getText().toString().trim());
+            } catch (Exception ex) {
+                dlg.dismiss();
+                return;
+            }
+            if (target > 0 && displayedWatts > 0.5) {
+                double newRatio = ratio * (target / displayedWatts);
+                if (newRatio > 0.1 && newRatio < 10) {
+                    ratio = newRatio;
+                    cfg.edit().putFloat("ratio", (float) ratio)
+                            .putBoolean("cells_manual", true).apply();
+                    cellsManual = true;
+                    peak = 0;
+                    chart.clear();
+                    tick();
+                    Toast.makeText(this, String.format("校准完成：倍率 %.2f", ratio),
+                            Toast.LENGTH_LONG).show();
+                } else {
+                    Toast.makeText(this, "数值差距太大，请检查输入", Toast.LENGTH_SHORT).show();
+                }
+            }
+            dlg.dismiss();
+        });
+        dlg.show();
     }
 
     private LinearLayout row() {
@@ -887,10 +997,12 @@ public class MainActivity extends Activity {
                 powerAnim = null;
             }
             powerText.setText("--");
-        } else if (animMode > 0) {
+        } else if (animMode > 0 && !firstPowerFrame) {
             animatePower(watts);
         } else {
+            displayedWatts = watts;
             powerText.setText(String.format("%.2f", watts));
+            firstPowerFrame = false;
         }
         powerText.setTextColor(feeding ? th.a2 : th.a1);
         if (th.dark) {
@@ -1060,7 +1172,15 @@ public class MainActivity extends Activity {
     private void updateCellsAuto(long counter, double amps) {
         if (cellsManual) return;
         int detected = cellDetector.add(counter, amps, System.currentTimeMillis());
-        if (detected > 0 && detected != cellCount) {
+        if (detected <= 0) return;
+        if (detected == pendingCells) {
+            pendingCellsCount++;
+        } else {
+            pendingCells = detected;
+            pendingCellsCount = 1;
+        }
+        // 连续两次识别一致才采纳，避免 counter 粒度造成的误判把双电芯写成单电芯
+        if (pendingCellsCount >= 2 && detected != cellCount) {
             cellCount = detected;
             cfg.edit().putInt("cells", cellCount).putBoolean("cells_auto", true).apply();
             peak = 0;

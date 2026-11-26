@@ -269,13 +269,9 @@ public class MainActivity extends Activity {
         powerText = new TextView(this);
         powerText.setText("--");
         powerText.setTextColor(th.a2);
-        powerText.setTextSize(64);
-        powerText.setAutoSizeTextTypeUniformWithConfiguration(
-                44, 64, 2, TypedValue.COMPLEX_UNIT_SP);
-        powerText.setTypeface(Typeface.create(
-                th.dark ? "sans-serif-thin" : "sans-serif-medium", Typeface.NORMAL));
+        powerText.setTextSize(56);
+        powerText.setTypeface(Typeface.DEFAULT_BOLD);
         powerText.setIncludeFontPadding(false);
-        powerText.setLetterSpacing(-0.02f);
         powerText.setOnTouchListener((v, ev) -> {
             gd.onTouchEvent(ev);
             return true;
@@ -401,14 +397,14 @@ public class MainActivity extends Activity {
         alp.topMargin = dp(18);
         actionRow.setLayoutParams(alp);
 
-        TextView detailBtn = actionButton("详细数据");
+        TextView detailBtn = actionButton("详细信息");
         detailBtn.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, DetailActivity.class)));
         LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0,
                 ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
         actionRow.addView(detailBtn, dlp);
 
-        TextView aboutBtn = actionButton("关于 / 开源");
+        TextView aboutBtn = actionButton("开源");
         aboutBtn.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, AboutActivity.class)));
         LinearLayout.LayoutParams alpb = new LinearLayout.LayoutParams(0,

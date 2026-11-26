@@ -168,7 +168,12 @@ public class ChargeWatchService extends Service {
             return;
         }
         boolean full = level >= 100 || status == BatteryManager.BATTERY_STATUS_FULL;
-        if (full && !notified) {
+        long lastNotify = getSharedPreferences("cfg", MODE_PRIVATE)
+                .getLong("last_full_notify", 0L);
+        boolean recentlyNotified = System.currentTimeMillis() - lastNotify < 12L * 3600 * 1000;
+        if (full && !notified && !recentlyNotified) {
+            getSharedPreferences("cfg", MODE_PRIVATE).edit()
+                    .putLong("last_full_notify", System.currentTimeMillis()).apply();
             notified = true;
             NotificationManager nm = getSystemService(NotificationManager.class);
             Notification n = new Notification.Builder(this, CH_FULL)

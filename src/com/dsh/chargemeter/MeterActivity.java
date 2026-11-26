@@ -43,7 +43,8 @@ public class MeterActivity extends Activity {
         getWindow().setNavigationBarColor(Color.BLACK);
 
         SharedPreferences cfg = getSharedPreferences("cfg", Context.MODE_PRIVATE);
-        cellCount = cfg.contains("cells") ? cfg.getInt("cells", 1) : 1;
+        cellCount = cfg.contains("cells") ? cfg.getInt("cells", 1)
+                : MainActivity.recommendedCells();
         ratio = cfg.getFloat("ratio", 1.0f);
 
         LinearLayout root = new LinearLayout(this);

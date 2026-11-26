@@ -196,11 +196,11 @@ public class MainActivity extends Activity {
         stateChip = new LinearLayout(this);
         stateChip.setOrientation(LinearLayout.HORIZONTAL);
         stateChip.setGravity(Gravity.CENTER_VERTICAL);
-        stateChip.setPadding(dp(9), dp(5), dp(11), dp(5));
+        stateChip.setPadding(dp(10), dp(7), dp(12), dp(7));
         stateDot = new View(this);
         stateChip.addView(stateDot, new LinearLayout.LayoutParams(dp(6), dp(6)));
         stateLabel = new TextView(this);
-        stateLabel.setTextSize(10);
+        stateLabel.setTextSize(11);
         stateLabel.setTypeface(MONO, Typeface.BOLD);
         stateLabel.setLetterSpacing(0.06f);
         stateLabel.setPadding(dp(6), 0, 0, 0);
@@ -209,9 +209,9 @@ public class MainActivity extends Activity {
 
         TextView themeBtn = new TextView(this);
         themeBtn.setText("风格");
-        themeBtn.setTextSize(11);
+        themeBtn.setTextSize(12);
         themeBtn.setTextColor(th.a1);
-        themeBtn.setPadding(dp(11), dp(5), dp(11), dp(5));
+        themeBtn.setPadding(dp(14), dp(8), dp(14), dp(8));
         themeBtn.setBackground(panelStroke(dp(30)));
         LinearLayout.LayoutParams tlp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -222,9 +222,9 @@ public class MainActivity extends Activity {
 
         TextView setBtn = new TextView(this);
         setBtn.setText("校准");
-        setBtn.setTextSize(11);
+        setBtn.setTextSize(12);
         setBtn.setTextColor(th.a1);
-        setBtn.setPadding(dp(11), dp(5), dp(11), dp(5));
+        setBtn.setPadding(dp(14), dp(8), dp(14), dp(8));
         setBtn.setBackground(panelStroke(dp(30)));
         LinearLayout.LayoutParams slp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -390,25 +390,29 @@ public class MainActivity extends Activity {
         levelText.setPadding(0, dp(14), 0, 0);
         root.addView(levelText);
 
-        TextView detailLink = new TextView(this);
-        detailLink.setText("详细数据 · 高级功能");
-        detailLink.setTextColor(th.a1);
-        detailLink.setTextSize(11);
-        detailLink.setGravity(Gravity.CENTER);
-        detailLink.setPadding(0, dp(16), 0, 0);
-        detailLink.setOnClickListener(v ->
-                startActivity(new Intent(MainActivity.this, DetailActivity.class)));
-        root.addView(detailLink);
+        LinearLayout actionRow = new LinearLayout(this);
+        actionRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams alp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        alp.topMargin = dp(18);
+        actionRow.setLayoutParams(alp);
 
-        TextView aboutLink = new TextView(this);
-        aboutLink.setText("关于 · 开源地址");
-        aboutLink.setTextColor(th.a1);
-        aboutLink.setTextSize(11);
-        aboutLink.setGravity(Gravity.CENTER);
-        aboutLink.setPadding(0, dp(10), 0, 0);
-        aboutLink.setOnClickListener(v ->
+        TextView detailBtn = actionButton("详细数据");
+        detailBtn.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, DetailActivity.class)));
+        LinearLayout.LayoutParams dlp = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        actionRow.addView(detailBtn, dlp);
+
+        TextView aboutBtn = actionButton("关于 / 开源");
+        aboutBtn.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, AboutActivity.class)));
-        root.addView(aboutLink);
+        LinearLayout.LayoutParams alpb = new LinearLayout.LayoutParams(0,
+                ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        alpb.leftMargin = dp(10);
+        actionRow.addView(aboutBtn, alpb);
+
+        root.addView(actionRow);
 
         rawText = new TextView(this);
         rawText.setTextSize(9);
@@ -483,6 +487,22 @@ public class MainActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
         v.setLayoutParams(lp);
         return v;
+    }
+
+    private TextView actionButton(String text) {
+        TextView b = new TextView(this);
+        b.setText(text);
+        b.setTextSize(13);
+        b.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        b.setGravity(Gravity.CENTER);
+        b.setPadding(dp(14), dp(12), dp(14), dp(12));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(th.panel);
+        bg.setCornerRadius(dp(14));
+        bg.setStroke(dp(1), th.line);
+        b.setBackground(bg);
+        b.setTextColor(th.a1);
+        return b;
     }
 
     private void pickTheme() {
@@ -717,7 +737,7 @@ public class MainActivity extends Activity {
         return tech;
     }
 
-    private int recommendedCells() {
+    public static int recommendedCells() {
         String b = (Build.BRAND + " " + Build.MANUFACTURER + " " + Build.MODEL).toLowerCase();
         // 国产快充机型（67W 以上基本是双电芯串联）
         if (b.contains("xiaomi") || b.contains("redmi") || b.contains("poco")
@@ -957,7 +977,9 @@ public class MainActivity extends Activity {
 
         double gaugeMax = Math.max(20, peak * 1.15);
         gauge.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
-        chart.push(feeding && valid ? (float) watts : 0f);
+        if (feeding && valid) {
+            chart.push((float) watts);
+        }
 
         updateCountdown(level, voltageMv, watts, feeding, valid);
 
@@ -1141,8 +1163,14 @@ public class MainActivity extends Activity {
     private double whFromCounter(long counter) {
         if (counter <= 0 || sessionStartCounter <= 0 || counter < sessionStartCounter) return 0;
         double deltaAh = (counter - sessionStartCounter) / 1_000_000.0;
-        double packVoltage = (lastVoltsText != null && lastVoltsText.contains("V"))
-                ? Double.parseDouble(lastVoltsText.replace("V", "").trim()) : 4.0;
+        double packVoltage = 4.0;
+        try {
+            if (lastVoltsText != null) {
+                double v = Double.parseDouble(lastVoltsText.replace("V", "").trim());
+                if (v > 0.5 && v < 20) packVoltage = v;
+            }
+        } catch (Exception ignored) {
+        }
         return deltaAh * packVoltage;
     }
 

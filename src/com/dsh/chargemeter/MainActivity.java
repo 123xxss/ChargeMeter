@@ -390,12 +390,22 @@ public class MainActivity extends Activity {
         levelText.setPadding(0, dp(14), 0, 0);
         root.addView(levelText);
 
+        TextView detailLink = new TextView(this);
+        detailLink.setText("详细数据 · 高级功能");
+        detailLink.setTextColor(th.a1);
+        detailLink.setTextSize(11);
+        detailLink.setGravity(Gravity.CENTER);
+        detailLink.setPadding(0, dp(16), 0, 0);
+        detailLink.setOnClickListener(v ->
+                startActivity(new Intent(MainActivity.this, DetailActivity.class)));
+        root.addView(detailLink);
+
         TextView aboutLink = new TextView(this);
         aboutLink.setText("关于 · 开源地址");
         aboutLink.setTextColor(th.a1);
         aboutLink.setTextSize(11);
         aboutLink.setGravity(Gravity.CENTER);
-        aboutLink.setPadding(0, dp(16), 0, 0);
+        aboutLink.setPadding(0, dp(10), 0, 0);
         aboutLink.setOnClickListener(v ->
                 startActivity(new Intent(MainActivity.this, AboutActivity.class)));
         root.addView(aboutLink);

@@ -124,9 +124,7 @@ public class MainActivity extends Activity {
     private long chargerStartTs = 0;
     private double chargerMaxW = 0;
     private String chargerName = null;
-    private int animMode = 1;
-    private ValueAnimator breathAnim;
-    private static final String[] ANIM_NAMES = {"关闭动画", "平滑过渡", "科技流光", "呼吸发光"};
+
 
     private float screenHz;
 
@@ -150,8 +148,6 @@ public class MainActivity extends Activity {
         cellsManual = cfg.getBoolean("cells_manual", false);
         history = new ChargeHistory(this);
         chargers = new ChargerProfiles(this);
-        animMode = cfg.getInt("anim", 1);
-        if (animMode < 0 || animMode >= ANIM_NAMES.length) animMode = 1;
         themeId = cfg.getInt("theme", 0);
         if (themeId < 0 || themeId >= THEMES.length) themeId = 0;
         th = THEMES[themeId];
@@ -422,16 +418,6 @@ public class MainActivity extends Activity {
             requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, 201);
         }
 
-        if (animMode == 2) {
-            gauge.startPulse();
-        } else if (animMode == 3) {
-            startBreathing();
-        }
-        if (animMode > 0) {
-            for (int i = 0; i < root.getChildCount(); i++) {
-                animateEnter(root.getChildAt(i), i);
-            }
-        }
 
 
         try {
@@ -546,15 +532,6 @@ public class MainActivity extends Activity {
             if (i < THEMES.length - 1) panel.addView(divider());
         }
 
-        panel.addView(divider());
-        TextView animRow = new TextView(this);
-        animRow.setText("动画效果 · " + ANIM_NAMES[animMode]);
-        animRow.setTextColor(th.a1);
-        animRow.setTextSize(14);
-        animRow.setPadding(dp(8), dp(14), dp(8), dp(14));
-        animRow.setOnClickListener(v -> pickAnim());
-        panel.addView(animRow);
-
         TextView cancel = new TextView(this);
         cancel.setText("取消");
         cancel.setTextSize(14);
@@ -565,50 +542,6 @@ public class MainActivity extends Activity {
 
         final Dialog dlg = themedDialog(panel);
         cancel.setOnClickListener(v -> dlg.dismiss());
-        dlg.show();
-    }
-
-    private void pickAnim() {
-        LinearLayout panel = dialogPanel();
-        panel.addView(dialogTitle("动画效果"));
-        for (int i = 0; i < ANIM_NAMES.length; i++) {
-            final int idx = i;
-            LinearLayout row = new LinearLayout(this);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(dp(10), dp(13), dp(10), dp(13));
-            TextView name = new TextView(this);
-            name.setText(ANIM_NAMES[i]);
-            name.setTextColor(th.text);
-            name.setTextSize(15);
-            row.addView(name, new LinearLayout.LayoutParams(0,
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-            if (idx == animMode) {
-                TextView ck = new TextView(this);
-                ck.setText("✓");
-                ck.setTextColor(th.a2);
-                ck.setTypeface(MONO, Typeface.BOLD);
-                row.addView(ck);
-            }
-            GradientDrawable rbg = new GradientDrawable();
-            rbg.setColor(idx == animMode ? (th.a1 & 0x00FFFFFF) | 0x14000000 : Color.TRANSPARENT);
-            rbg.setCornerRadius(dp(12));
-            row.setBackground(rbg);
-            row.setOnClickListener(v -> {
-                cfg.edit().putInt("anim", idx).apply();
-                recreate();
-            });
-            panel.addView(row);
-            if (i < ANIM_NAMES.length - 1) panel.addView(divider());
-        }
-        final Dialog dlg = themedDialog(panel);
-        TextView cancel = new TextView(this);
-        cancel.setText("取消");
-        cancel.setTextColor(th.dim);
-        cancel.setTextSize(14);
-        cancel.setGravity(Gravity.CENTER);
-        cancel.setPadding(dp(14), dp(14), dp(14), dp(6));
-        cancel.setOnClickListener(v -> dlg.dismiss());
-        panel.addView(cancel);
         dlg.show();
     }
 
@@ -949,11 +882,7 @@ public class MainActivity extends Activity {
         super.onPause();
         handler.removeCallbacks(ticker);
         if (powerAnim != null) powerAnim.cancel();
-        if (gauge != null) {
-            gauge.stopAnim();
-            gauge.stopPulse();
-        }
-        if (breathAnim != null) breathAnim.cancel();
+        if (gauge != null) gauge.stopAnim();
     }
 
     private void tick() {
@@ -991,19 +920,8 @@ public class MainActivity extends Activity {
         boolean feeding = amps > 0.02;
         boolean valid = currentSupported && voltageMv >= 2500 && voltageMv <= 5000;
 
-        if (!valid) {
-            if (powerAnim != null) {
-                powerAnim.cancel();
-                powerAnim = null;
-            }
-            powerText.setText("--");
-        } else if (animMode > 0 && !firstPowerFrame) {
-            animatePower(watts);
-        } else {
-            displayedWatts = watts;
-            powerText.setText(String.format("%.2f", watts));
-            firstPowerFrame = false;
-        }
+        displayedWatts = watts;
+        powerText.setText(valid ? String.format("%.2f", watts) : "--");
         powerText.setTextColor(feeding ? th.a2 : th.a1);
         if (th.dark) {
             powerText.setShadowLayer(dp(12), 0, 0, (feeding ? th.a2 : th.a1) & 0x88FFFFFF);
@@ -1028,11 +946,7 @@ public class MainActivity extends Activity {
         updateCard(peakText, peak > 0 ? String.format("%.2f W", peak) : "--");
 
         double gaugeMax = Math.max(20, peak * 1.15);
-        if (animMode > 0) {
-            gauge.animateTo(valid ? (float) (watts / gaugeMax) : 0f);
-        } else {
-            gauge.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
-        }
+        gauge.setRatio(valid ? (float) (watts / gaugeMax) : 0f);
         chart.push(feeding && valid ? (float) watts : 0f);
 
         updateCountdown(level, voltageMv, watts, feeding, valid);
@@ -1267,38 +1181,6 @@ public class MainActivity extends Activity {
             sendBroadcast(i);
         } catch (Exception ignored) {
         }
-    }
-
-    private void animatePower(double target) {
-        if (powerAnim != null) powerAnim.cancel();
-        powerAnim = ValueAnimator.ofFloat((float) displayedWatts, (float) target);
-        powerAnim.setDuration(320);
-        powerAnim.setInterpolator(new DecelerateInterpolator());
-        powerAnim.addUpdateListener(a -> {
-            displayedWatts = (float) (double) (Float) a.getAnimatedValue();
-            powerText.setText(String.format("%.2f", displayedWatts));
-        });
-        powerAnim.start();
-    }
-
-    private void startBreathing() {
-        if (breathAnim != null) breathAnim.cancel();
-        breathAnim = ValueAnimator.ofFloat(0.35f, 1f, 0.35f);
-        breathAnim.setDuration(2400);
-        breathAnim.setRepeatCount(ValueAnimator.INFINITE);
-        breathAnim.addUpdateListener(a -> {
-            float f = (float) a.getAnimatedValue();
-            powerText.setShadowLayer(dp(10) + dp(10) * f, 0, 0,
-                    ((int) (0x70 * f) << 24) | (th.a2 & 0x00FFFFFF));
-        });
-        breathAnim.start();
-    }
-
-    private void animateEnter(View v, int index) {
-        v.setAlpha(0f);
-        v.setTranslationY(dp(16));
-        v.animate().alpha(1f).translationY(0f).setDuration(420)
-                .setStartDelay(index * 60L).setInterpolator(new DecelerateInterpolator()).start();
     }
 
     private int dp(int v) {

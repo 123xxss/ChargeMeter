@@ -200,7 +200,7 @@ public class MainActivity extends Activity {
         stateDot = new View(this);
         stateChip.addView(stateDot, new LinearLayout.LayoutParams(dp(6), dp(6)));
         stateLabel = new TextView(this);
-        stateLabel.setTextSize(11);
+        stateLabel.setTextSize(10);
         stateLabel.setTypeface(MONO, Typeface.BOLD);
         stateLabel.setLetterSpacing(0.06f);
         stateLabel.setPadding(dp(6), 0, 0, 0);
@@ -247,6 +247,8 @@ public class MainActivity extends Activity {
         powerCaption.setText("充入功率");
         powerCaption.setTextColor(th.dim);
         powerCaption.setTextSize(12);
+        powerCaption.setMaxLines(1);
+        powerCaption.setEllipsize(android.text.TextUtils.TruncateAt.END);
         powerCaption.setLetterSpacing(0.14f);
         powerCaption.setGravity(Gravity.CENTER);
         hero.addView(powerCaption);
@@ -267,7 +269,9 @@ public class MainActivity extends Activity {
         powerText = new TextView(this);
         powerText.setText("--");
         powerText.setTextColor(th.a2);
-        powerText.setTextSize(84);
+        powerText.setTextSize(64);
+        powerText.setAutoSizeTextTypeUniformWithConfiguration(
+                44, 64, 2, TypedValue.COMPLEX_UNIT_SP);
         powerText.setTypeface(Typeface.create(
                 th.dark ? "sans-serif-thin" : "sans-serif-medium", Typeface.NORMAL));
         powerText.setIncludeFontPadding(false);
@@ -292,14 +296,14 @@ public class MainActivity extends Activity {
         powerUnit = new TextView(this);
         powerUnit.setText("W");
         powerUnit.setTextColor(th.dim);
-        powerUnit.setTextSize(22);
+        powerUnit.setTextSize(20);
         powerUnit.setPadding(dp(6), 0, 0, dp(14));
         powerRow.addView(powerUnit);
         hero.addView(powerRow);
 
         tierText = new TextView(this);
         tierText.setText("");
-        tierText.setTextSize(11);
+        tierText.setTextSize(10);
         tierText.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         tierText.setLetterSpacing(0.1f);
         tierText.setGravity(Gravity.CENTER);
@@ -308,9 +312,11 @@ public class MainActivity extends Activity {
 
         countdownText = new TextView(this);
         countdownText.setTextColor(th.a1);
-        countdownText.setTextSize(12);
+        countdownText.setTextSize(11);
         countdownText.setGravity(Gravity.CENTER);
-        countdownText.setPadding(0, dp(8), 0, 0);
+        countdownText.setPadding(dp(8), dp(8), dp(8), 0);
+        countdownText.setMaxLines(1);
+        countdownText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         hero.addView(countdownText);
         root.addView(hero);
 
@@ -328,7 +334,9 @@ public class MainActivity extends Activity {
         factorText.setTextColor(th.dim);
         factorText.setTextSize(10);
         factorText.setGravity(Gravity.CENTER);
-        factorText.setPadding(0, dp(10), 0, 0);
+        factorText.setPadding(dp(8), dp(10), dp(8), 0);
+        factorText.setMaxLines(1);
+        factorText.setEllipsize(android.text.TextUtils.TruncateAt.END);
         root.addView(factorText);
 
         // ===== 指标 =====
@@ -857,10 +865,12 @@ public class MainActivity extends Activity {
 
     private View card(String label, String value) {
         TextView tv = new TextView(this);
-        tv.setPadding(dp(13), dp(10), dp(13), dp(10));
-        tv.setMinimumHeight(dp(74));
-        tv.setBackground(panelStroke(dp(10)));
-        tv.setLineSpacing(dp(7), 1f);
+        tv.setPadding(dp(12), dp(10), dp(12), dp(10));
+        tv.setMinimumHeight(dp(64));
+        tv.setBackground(panelStroke(dp(20)));
+        tv.setLineSpacing(dp(5), 1f);
+        tv.setMaxLines(2);
+        tv.setEllipsize(android.text.TextUtils.TruncateAt.END);
         cardLabels.put(tv, label);
         setCard(tv, value);
 
@@ -884,10 +894,10 @@ public class MainActivity extends Activity {
         String full = label + "\n" + value;
         SpannableString ss = new SpannableString(full);
         int cut = label.length();
-        ss.setSpan(new AbsoluteSizeSpan(11, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new AbsoluteSizeSpan(10, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new ForegroundColorSpan(th.dim), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new StyleSpan(Typeface.NORMAL), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new AbsoluteSizeSpan(20, true), cut + 1, full.length(),
+        ss.setSpan(new AbsoluteSizeSpan(16, true), cut + 1, full.length(),
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         ss.setSpan(new ForegroundColorSpan(th.text), cut + 1, full.length(),
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

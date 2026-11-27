@@ -248,7 +248,11 @@ public class DetailActivity extends Activity {
         sb.append(String.format("电量    %s%n", level >= 0 ? level + "%" : "--"));
         sb.append(String.format("功率    %.2f W（%d 电芯 · 倍率 %.2f）%n", watts, cells, ratio));
         sb.append(String.format("电流    %s%n", raw == Long.MIN_VALUE ? "不支持" : String.format("%.3f A", amps)));
-        sb.append(String.format("电压    %s mV（包 %d mV）%n", voltage, voltage * cells));
+        if (cells > 1) {
+            sb.append(String.format("电压    单芯 %d mV · 包 %d mV%n", voltage, voltage * cells));
+        } else {
+            sb.append(String.format("电压    %d mV%n", voltage));
+        }
         sb.append(String.format("温度    %s%n", temp > 0 ? String.format("%.1f °C", temp / 10.0) : "--"));
         sb.append(String.format("健康    %s%n", healthText(health)));
         sb.append(String.format("状态    %s%n", statusText(status)));

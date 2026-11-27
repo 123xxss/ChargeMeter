@@ -870,7 +870,7 @@ public class MainActivity extends Activity {
     private View card(String label, String value) {
         TextView tv = new TextView(this);
         tv.setPadding(dp(12), dp(10), dp(12), dp(10));
-        tv.setMinimumHeight(dp(64));
+        tv.setMinimumHeight(dp(78));
         tv.setBackground(panelStroke(dp(20)));
         tv.setLineSpacing(dp(5), 1f);
         tv.setMaxLines(2);
@@ -893,18 +893,31 @@ public class MainActivity extends Activity {
     }
 
     private void setCard(TextView tv, String value) {
+        setCard(tv, value, null);
+    }
+
+    /** label(小) / value(大) / sub(可选小字，如单芯电压) */
+    private void setCard(TextView tv, String value, String sub) {
         String label = cardLabels.get(tv);
         if (label == null) label = "";
-        String full = label + "\n" + value;
+        boolean hasSub = sub != null && !sub.isEmpty();
+        String full = label + "\n" + value + (hasSub ? "\n" + sub : "");
+        int labelEnd = label.length();
+        int valueStart = labelEnd + 1;
+        int valueEnd = valueStart + value.length();
         SpannableString ss = new SpannableString(full);
-        int cut = label.length();
-        ss.setSpan(new AbsoluteSizeSpan(10, true), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new ForegroundColorSpan(th.dim), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new StyleSpan(Typeface.NORMAL), 0, cut, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new AbsoluteSizeSpan(16, true), cut + 1, full.length(),
+        ss.setSpan(new AbsoluteSizeSpan(10, true), 0, labelEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new ForegroundColorSpan(th.dim), 0, labelEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new AbsoluteSizeSpan(16, true), valueStart, valueEnd,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        ss.setSpan(new ForegroundColorSpan(th.text), cut + 1, full.length(),
+        ss.setSpan(new ForegroundColorSpan(th.text), valueStart, valueEnd,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        if (hasSub) {
+            ss.setSpan(new AbsoluteSizeSpan(9, true), valueEnd + 1, full.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            ss.setSpan(new ForegroundColorSpan(th.dim), valueEnd + 1, full.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
         tv.setTypeface(MONO);
         tv.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         tv.setText(ss);
@@ -912,6 +925,10 @@ public class MainActivity extends Activity {
 
     private void updateCard(TextView tv, String value) {
         if (tv != null) setCard(tv, value);
+    }
+
+    private void updateCard(TextView tv, String value, String sub) {
+        if (tv != null) setCard(tv, value, sub);
     }
 
     @Override
@@ -956,8 +973,8 @@ public class MainActivity extends Activity {
         }
         double amps = instantAmps;
         double voltsMv = voltageMv;
-        double cells = voltsMv / 1000.0 * cellCount;
-        double watts = Math.abs(amps) * cells * ratio;
+        double packVolts = voltsMv / 1000.0 * cellCount;
+        double watts = Math.abs(amps) * packVolts * ratio;
 
         boolean charging = status == BatteryManager.BATTERY_STATUS_CHARGING;
         boolean feeding = amps > 0.02;
@@ -978,9 +995,11 @@ public class MainActivity extends Activity {
         }
 
         lastAmps = amps;
-        lastVoltsText = String.format("%.2f V", cells);
+        lastVoltsText = String.format("%.2f V", packVolts);
         updateCard(currentText, String.format("%.2f A", amps));
-        updateCard(voltageText, valid ? String.format("%.2f V", cells) : "--");
+        String voltSub = (valid && cellCount > 1)
+                ? String.format("单芯 %.2f V", voltsMv / 1000.0) : null;
+        updateCard(voltageText, valid ? String.format("%.2f V", packVolts) : "--", voltSub);
         updateCard(tempText, tempTenths > 0 ? String.format("%.1f °C", tempTenths / 10.0) : "--");
 
         if (feeding && valid && watts > peak) {

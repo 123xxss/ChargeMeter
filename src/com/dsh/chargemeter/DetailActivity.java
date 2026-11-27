@@ -117,6 +117,18 @@ public class DetailActivity extends Activity {
         total.addView(exportButton());
         root.addView(total);
 
+        // 术语说明
+        LinearLayout note = card();
+        note.addView(cardTitle("说明"));
+        TextView noteBody = body();
+        noteBody.setText("· 电压：系统上报的是「单芯电压」，双电芯机型的包电压 = 单芯 × 2\n"
+                + "· 电芯数：优先由充电曲线自动识别，也可在「校准」手动指定\n"
+                + "· 功率：|电流| × 包电压 × 倍率，为电池侧读数，非充电器输入功率\n"
+                + "· 健康：系统 BatteryService 上报的状态（良好 / 过热 / 老化等）");
+        noteBody.setTextSize(11);
+        note.addView(noteBody);
+        root.addView(note);
+
         TextView tip = new TextView(this);
         tip.setText("高级功能：数据可导出 CSV，供测充电器 / 对比曲线使用");
         tip.setTextColor(th.dim);

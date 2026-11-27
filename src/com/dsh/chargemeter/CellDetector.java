@@ -33,7 +33,7 @@ class CellDetector {
         ampSum += Math.abs(amps);
         samples++;
         long span = nowMs - startTs;
-        if (span < 45000 || samples < 20) return result;
+        if (span < 90000 || samples < 45) return result;
 
         double dCounterMah = (counterUAh - startCounter) / 1000.0;
         double hours = span / 3600000.0;
@@ -44,8 +44,8 @@ class CellDetector {
         }
         double impliedAmps = dCounterMah / hours;
         double k = impliedAmps / avgAmps;
-        if (k > 1.75 && k < 2.30) result = 2;
-        else if (k > 0.85 && k < 1.20) result = 1;
+        if (k > 1.85 && k < 2.15) result = 2;
+        else if (k > 0.90 && k < 1.10) result = 1;
         reset();
         return result;
     }

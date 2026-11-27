@@ -143,7 +143,6 @@ public class MainActivity extends Activity {
 
         bm = (BatteryManager) getSystemService(BATTERY_SERVICE);
         cfg = getSharedPreferences("cfg", Context.MODE_PRIVATE);
-        cellsManual = cfg.getBoolean("cells_manual", false);
         cellCount = cellsManual ? cfg.getInt("cells", recommendedCells()) : recommendedCells();
         ratio = cfg.getFloat("ratio", 1.0f);
         cellsManual = cfg.getBoolean("cells_manual", false);
@@ -997,8 +996,12 @@ public class MainActivity extends Activity {
         lastAmps = amps;
         lastVoltsText = String.format("%.2f V", packVolts);
         updateCard(currentText, String.format("%.2f A", amps));
-        String voltSub = (valid && cellCount > 1)
-                ? String.format("单芯 %.2f V", voltsMv / 1000.0) : null;
+        String voltSub = null;
+        if (valid) {
+            voltSub = cellCount > 1
+                    ? String.format("单芯 %.2f V · %d 串", voltsMv / 1000.0, cellCount)
+                    : "单电芯";
+        }
         updateCard(voltageText, valid ? String.format("%.2f V", packVolts) : "--", voltSub);
         updateCard(tempText, tempTenths > 0 ? String.format("%.1f °C", tempTenths / 10.0) : "--");
 
@@ -1016,7 +1019,8 @@ public class MainActivity extends Activity {
         updateCountdown(level, voltageMv, watts, feeding, valid);
 
         levelText.setText("电量 " + (level >= 0 ? level + "%" : "--")
-                + String.format(" · %d 电芯 · 倍率 %.2f", cellCount, ratio)
+                + String.format(" · %d 电芯%s · 倍率 %.2f", cellCount,
+                        cellsManual ? "" : "(自动)", ratio)
                 + (screenHz > 0 ? String.format(" · %.0fHz", screenHz) : ""));
 
         String chip;
@@ -1073,6 +1077,9 @@ public class MainActivity extends Activity {
         tierText.setTextColor(tierColor);
 
         updateCharger(plugged, watts);
+        if (charging && plugged != 0) {
+            updateCellsAuto(counter, amps);
+        }
         updateHistory(charging, plugged, level, watts, counter);
         maybeStartWatch(charging, plugged);
 
@@ -1088,7 +1095,7 @@ public class MainActivity extends Activity {
     private void updateCountdown(int level, int voltageMv, double watts, boolean feeding, boolean valid) {
         if (countdownText == null) return;
         if (!feeding || !valid || level <= 0 || level >= 100) {
-            countdownText.setText(level >= 100 ? "已充满" : "");
+            countdownText.setText(feeding && level >= 100 ? "已充满" : "");
             return;
         }
         long counter = bm.getLongProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER);

@@ -13,7 +13,7 @@
 
 [![宣传视频](docs/screenshot.png)](docs/promo.mp4)
 
-> 18 秒功能演示：[docs/promo.mp4](docs/promo.mp4)（点击预览或下载）
+> 20 秒功能演示：[docs/promo.mp4](docs/promo.mp4)（9 个场景：主界面 / 指标 / 曲线 / 通知栏 / 详细信息 / 主题 / 常亮模式 / 功能清单）
 
 ## 功能
 

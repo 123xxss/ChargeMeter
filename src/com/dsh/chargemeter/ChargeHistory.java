@@ -64,6 +64,24 @@ public class ChargeHistory extends SQLiteOpenHelper {
         getWritableDatabase().update("sessions", v, "_id=?", new String[]{String.valueOf(id)});
     }
 
+    /** 找最近一条还在进行中的会话（end_ts 距现在 3 分钟以内），用于 App 重启后续接 */
+    public long findResumable(long withinMs) {
+        Cursor c = null;
+        try {
+            c = getReadableDatabase().query("sessions", new String[]{"_id", "end_ts"},
+                    null, null, null, null, "end_ts DESC", "1");
+            if (c != null && c.moveToNext()) {
+                long id = c.getLong(0);
+                long endTs = c.getLong(1);
+                if (System.currentTimeMillis() - endTs < withinMs) return id;
+            }
+        } catch (Exception ignored) {
+        } finally {
+            if (c != null) c.close();
+        }
+        return -1;
+    }
+
     public static class Row {
         public long startTs, endTs;
         public int levelStart, levelEnd, cells;

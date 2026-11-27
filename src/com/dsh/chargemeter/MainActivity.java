@@ -116,6 +116,7 @@ public class MainActivity extends Activity {
     private int sessionSamples = 0;
     private long lastHistoryWrite = 0;
     private boolean cellsManual = false;
+    private boolean cellsAutoDone = false;
     private int pendingCells = 0;
     private int pendingCellsCount = 0;
     private boolean firstPowerFrame = true;
@@ -146,6 +147,7 @@ public class MainActivity extends Activity {
         cellCount = cellsManual ? cfg.getInt("cells", recommendedCells()) : recommendedCells();
         ratio = cfg.getFloat("ratio", 1.0f);
         cellsManual = cfg.getBoolean("cells_manual", false);
+        cellsAutoDone = cfg.getBoolean("cells_auto", false);
         history = new ChargeHistory(this);
         chargers = new ChargerProfiles(this);
         themeId = cfg.getInt("theme", 0);
@@ -1020,7 +1022,7 @@ public class MainActivity extends Activity {
 
         levelText.setText("电量 " + (level >= 0 ? level + "%" : "--")
                 + String.format(" · %d 电芯%s · 倍率 %.2f", cellCount,
-                        cellsManual ? "" : "(自动)", ratio)
+                        cellsManual ? "" : (cellsAutoDone ? "(自动)" : "(识别中)"), ratio)
                 + (screenHz > 0 ? String.format(" · %.0fHz", screenHz) : ""));
 
         String chip;
@@ -1165,8 +1167,15 @@ public class MainActivity extends Activity {
         // 连续两次识别一致才采纳，避免 counter 粒度造成的误判把双电芯写成单电芯
         if (pendingCellsCount >= 2 && detected != cellCount) {
             cellCount = detected;
-            cfg.edit().putInt("cells", cellCount).putBoolean("cells_auto", true).apply();
+            cellsAutoDone = true;
+            // 倍率是基于旧电芯数校准出来的，电芯数变了就复位，避免功率被放大/缩小
+            ratio = 1.0;
+            cfg.edit().putInt("cells", cellCount).putFloat("ratio", 1.0f)
+                    .putBoolean("cells_auto", true).apply();
             peak = 0;
+            chart.clear();
+        } else if (pendingCellsCount >= 2) {
+            cellsAutoDone = true;
         }
     }
 
@@ -1174,10 +1183,14 @@ public class MainActivity extends Activity {
         long now = System.currentTimeMillis();
         if (charging && plugged != 0) {
             if (sessionId < 0) {
+                // App 被系统回收重启时，续接 3 分钟内尚未结束的会话，避免同一次充电出现多条记录
+                sessionId = history.findResumable(3 * 60 * 1000L);
                 sessionStartCounter = counter;
                 sessionSumWatts = 0;
                 sessionSamples = 0;
-                sessionId = history.start(level, watts, cellCount);
+                if (sessionId < 0) {
+                    sessionId = history.start(level, watts, cellCount);
+                }
                 lastHistoryWrite = now;
             } else {
                 sessionSumWatts += watts;

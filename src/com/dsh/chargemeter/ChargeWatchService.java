@@ -27,6 +27,8 @@ public class ChargeWatchService extends Service {
 
     private final Handler handler = new Handler(Looper.getMainLooper());
     private boolean notified = false;
+    private double lastShownWatts = -999;
+    private int lastShownLevel = -1;
     private long chargerStart = 0;
     private double chargerMax = 0;
     private boolean chargerDone = false;
@@ -116,6 +118,13 @@ public class ChargeWatchService extends Service {
                 watts = Math.abs(amps) * (voltage / 1000.0) * cells * ratio;
                 if (watts > 400) watts /= 1000.0;
             }
+            boolean changed = Math.abs(watts - lastShownWatts) >= 0.05 || level != lastShownLevel;
+            if (!changed) {
+                trackCharger(it, watts);
+                return;
+            }
+            lastShownWatts = watts;
+            lastShownLevel = level;
             Notification n = new Notification.Builder(this, CH_ONGOING)
                     .setSmallIcon(R.drawable.ic_launcher)
                     .setContentTitle(String.format("%.1f W · %d%%", watts, level))
